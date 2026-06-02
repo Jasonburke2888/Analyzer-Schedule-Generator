@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FEL-3 Analyzer Schedule Template Builder</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>FEL-3 Analyzer Schedule Template Builder</h1>
+    <p>Customize activities, include/exclude scope, override names/durations/hours, collect lead notes, then export CSV for P6 prep.</p>
+  </header>
+
+  <section class="toolbar" aria-label="Filters and actions">
+    <div class="filter-group">
+      <label for="filter-discipline">Discipline</label>
+      <select id="filter-discipline">
+        <option value="">All disciplines</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-deliverable">Deliverable</label>
+      <select id="filter-deliverable">
+        <option value="">All deliverables</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-include">Include</label>
+      <select id="filter-include">
+        <option value="">All</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-status">Status</label>
+      <select id="filter-status">
+        <option value="">All statuses</option>
+      </select>
+    </div>
+    <button type="button" id="btn-add" class="btn btn-green">Add Activity</button>
+    <button type="button" id="btn-delete" class="btn btn-danger">Delete Selected</button>
+    <button type="button" id="btn-save" class="btn">Save</button>
+    <button type="button" id="btn-export" class="btn">Export Included to CSV</button>
+    <button type="button" id="btn-reset" class="btn btn-secondary">Reset</button>
+  </section>
+
+  <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+
+  <section class="cards" aria-label="Schedule summary">
+    <div class="card">
+      <div class="card-label">Included Activities</div>
+      <div class="card-kpi" id="kpi-activities">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Included Hours</div>
+      <div class="card-kpi" id="kpi-hours">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Disciplines Included</div>
+      <div class="card-kpi" id="kpi-disciplines">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Lead Review / Hold</div>
+      <div class="card-kpi" id="kpi-review">0</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Activity Builder</h2>
+        <p class="hint">Checkbox controls Include. Final Name/Duration/Hours use custom override when filled, otherwise base value.</p>
+      </div>
+      <p class="hint" id="visible-count"></p>
+    </div>
+    <div class="table-wrap">
+      <table id="schedule-table">
+        <thead>
+          <tr>
+            <th class="col-select">
+              <input type="checkbox" id="select-all" aria-label="Select all visible rows">
+            </th>
+            <th class="col-include">Include</th>
+            <th>Activity ID</th>
+            <th>Discipline</th>
+            <th>Deliverable</th>
+            <th>Type</th>
+            <th>Base Activity Name</th>
+            <th>Custom Activity Name</th>
+            <th>Final Activity Name</th>
+            <th class="col-num">Base Dur</th>
+            <th class="col-num">Custom Dur</th>
+            <th class="col-num">Final Dur</th>
+            <th class="col-num">Base Hrs</th>
+            <th class="col-num">Custom Hrs</th>
+            <th class="col-num">Final Hrs</th>
+            <th>Owner / Lead</th>
+            <th>Status</th>
+            <th>Lead Notes</th>
+          </tr>
+        </thead>
+        <tbody id="activities-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
