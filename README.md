@@ -1,6 +1,6 @@
-# FEL-3 Analyzer Schedule Template Builder
+# FEL-3 Analyzer Schedule Template Builder (v2.2)
 
-Interactive schedule builder for discipline leads — rebuilt from `reference/FEL3_Analyzer_Template_Builder_v2.html` as a clean multi-file app with the focus bug fixed.
+Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages; no Python server required for coworkers.
 
 ## Project structure
 
@@ -9,16 +9,11 @@ Analyzer-Schedule-Generator/
   index.html
   css/styles.css
   js/app.js
-  data/activities.csv      ← 108 FEL-3 activities from reference template
-  reference/               ← original single-file HTML (design reference only)
+  data/activities.csv
   README.md
 ```
 
-## Run locally (optional — for developers only)
-
-Coworkers should use the **GitHub Pages URL** (see below), not a local server.
-
-To test changes on your machine:
+## Run locally (developers)
 
 ```bash
 cd Analyzer-Schedule-Generator
@@ -27,82 +22,65 @@ python3 -m http.server 8080
 
 Open [http://localhost:8080](http://localhost:8080)
 
-## Workflow
+## v2.2 features
 
-1. **Filter** by Discipline, Deliverable, Include (Yes/No), or Status.
-2. **Include** — check the Include checkbox for activities in scope (unchecked rows appear dimmed).
-3. **Customize** — edit Activity ID, names, durations, hours, owner, status, and lead notes. Final columns update live without losing keyboard focus.
-4. **Add Activity** — inserts a new row at the top.
-5. **Delete Selected** — check rows in the left Select column, then delete.
-6. **Save** — writes to browser `localStorage` (also auto-saves on blur/change).
-7. **Export Included to CSV** — downloads only checked Include rows with final name/duration/hours.
-8. **Reset** — reloads `data/activities.csv` and clears saved edits.
+### Compact toolbar
 
-## Replace template data
+Project Setup, filters, and action buttons share one compact toolbar (two field rows + action row). Reduced padding and vertical spacing so more of the screen is available for the activity grid.
 
-Edit `data/activities.csv`. Columns:
+### Delete password
 
-| Column | Maps to |
-|--------|---------|
-| `include` | yes/no (default yes) |
-| `discipline` | Discipline |
-| `deliverable` | Deliverable |
-| `activity_id` | Activity ID |
-| `activity_type` | Type |
-| `activity_name` | Base Activity Name |
-| `custom_activity_name` | Custom Activity Name |
-| `original_duration` | Base Dur |
-| `custom_duration` | Custom Dur |
-| `budgeted_hours` | Base Hrs |
-| `custom_hours` | Custom Hrs |
-| `owner` | Owner / Lead |
-| `status` | Status |
-| `lead_notes` | Lead Notes |
+**Delete Selected** opens a password prompt (masked input). Wrong password cancels; correct password deletes the selected rows. Password is not shown anywhere in the static UI.
 
-Click **Reset** after updating the CSV.
+### New Activity ID
 
-## Focus bug fix
+**Add Activity** assigns the next numeric Activity ID as **highest existing ID + 10** (e.g. highest `32070` → new `32080`). No `NEW_` prefix.
 
-The reference HTML called `render()` on every `input` event, rebuilding the entire table and destroying the focused element. This app:
+### Editable grid
 
-- Rebuilds rows only on **add**, **delete**, or **reset**
-- Updates computed Final columns via `updateRowComputed()` during typing
-- Applies filters with CSS (`row-hidden`) instead of DOM rebuild
+All activity fields remain user-editable: Include, Discipline, Deliverable, Activity Owner, Type, base/custom/final name, duration/hours, status, notes — plus row select and delete with password.
+
+## v2.1 features (retained)
+
+### Project Setup
+
+| Field | Control |
+|-------|---------|
+| Project Name | Dropdown (+ Add Project...) |
+| Project ID | Text — used to prefix Activity IDs on export |
+| Client | Text |
+| FEL Stage | FEL-1, FEL-2, FEL-3, **FEL-4**, **Construction** |
+| Discipline Lead | Dropdown (Unassigned, Joe Smith, Other + custom) |
+
+### Activity grid
+
+- **Activity ID** — shows suffix only in grid (`31010`); export adds `ProjectID_` prefix (`1517_31010`)
+- **Discipline / Deliverable** — wide dropdowns with + Add options
+- **Activity Owner** — customizable dropdown (+ Add Activity Owner...)
+- Custom Activity Name, Duration, Hours — focus-safe editing
+
+### Manage Lists (5 tabs)
+
+Projects · Disciplines · Deliverables · **Discipline Leads** · **Activity Owners**
+
+Each tab: Add, Edit (rename), Delete. Renaming disciplines/deliverables/owners updates matching activity rows.
+
+### CSV export (included rows)
+
+Project Name, Project ID, Client, FEL Stage, **Discipline Lead**, **Activity ID** (with prefix), Activity Name, Discipline, Deliverable, Activity Type, Original Duration, Budgeted Hours, **Activity Owner**, Lead Status, Lead Notes
+
+**Reset** reloads activities from CSV; keeps project setup and custom lists.
 
 ## Publish with GitHub Pages
 
-The app is a static site: `index.html`, relative `css/styles.css`, `js/app.js`, and `data/activities.csv`. No build step and **no Python server** for coworkers — share the Pages link only.
+This repository **is** the site root (not a subfolder in another repo).
 
-### One-time repo setup
+1. Push to `main` on `https://github.com/Jasonburke2888/Analyzer-Schedule-Generator`
+2. **Settings → Pages → Source:** GitHub Actions (workflow: `.github/workflows/deploy-pages.yml`)
+3. Share: `https://jasonburke2888.github.io/Analyzer-Schedule-Generator/`
 
-1. Push this repository to GitHub (include the `Analyzer-Schedule-Generator/` folder and `.github/workflows/deploy-analyzer-schedule-pages.yml`).
-2. In the repo on GitHub, open **Settings → Pages**.
-3. Under **Build and deployment**, set **Source** to **GitHub Actions** (not “Deploy from a branch”).
-4. Push to `main` or run the workflow manually (**Actions → Deploy Analyzer Schedule to GitHub Pages → Run workflow**).
-5. When the workflow finishes, Pages shows the live URL, typically:
-   - `https://<username>.github.io/<repo-name>/`
+## Technical notes
 
-### What gets deployed
-
-The workflow uploads **only** the contents of `Analyzer-Schedule-Generator/` as the site root, so these relative paths resolve correctly on Pages:
-
-| File | URL path |
-|------|----------|
-| `index.html` | `/` |
-| `css/styles.css` | `/css/styles.css` |
-| `js/app.js` | `/js/app.js` |
-| `data/activities.csv` | `/data/activities.csv` |
-
-The `.nojekyll` file prevents Jekyll from ignoring `data/` or other static assets.
-
-### Share with discipline leads
-
-Send the GitHub Pages URL. They open it in a browser, edit activities, and use **Export Included to CSV**. Edits persist in **localStorage** in that browser.
-
-### Updating the live site
-
-Push changes under `Analyzer-Schedule-Generator/` to `main`. The deploy workflow runs automatically and updates Pages within a few minutes.
-
-### Note on opening `index.html` from disk
-
-Double-clicking `index.html` (`file://`) will **not** load the CSV — browsers block `fetch` for local files. Use the GitHub Pages URL (or a local server only while developing).
+- Storage key: `fel3-analyzer-schedule-generator-v3`
+- No full table re-render on keystroke
+- Relative paths: `css/styles.css`, `js/app.js`, `data/activities.csv`

@@ -12,38 +12,65 @@
     <p>Customize activities, include/exclude scope, override names/durations/hours, collect lead notes, then export CSV for P6 prep.</p>
   </header>
 
-  <section class="toolbar" aria-label="Filters and actions">
-    <div class="filter-group">
-      <label for="filter-discipline">Discipline</label>
-      <select id="filter-discipline">
-        <option value="">All disciplines</option>
-      </select>
+  <section class="compact-toolbar" aria-label="Project setup, filters, and actions">
+    <div class="compact-row">
+      <label class="inline-field inline-field-project">
+        <span class="inline-label">Project</span>
+        <select id="project-select"></select>
+      </label>
+      <label class="inline-field inline-field-id">
+        <span class="inline-label">ID</span>
+        <input id="project-id" type="text" placeholder="1517">
+      </label>
+      <label class="inline-field inline-field-client">
+        <span class="inline-label">Client</span>
+        <input id="project-client" type="text" placeholder="Client">
+      </label>
+      <label class="inline-field inline-field-stage">
+        <span class="inline-label">Stage</span>
+        <select id="project-fel-stage"></select>
+      </label>
+      <label class="inline-field inline-field-lead">
+        <span class="inline-label">Lead</span>
+        <select id="discipline-lead-select"></select>
+      </label>
     </div>
-    <div class="filter-group">
-      <label for="filter-deliverable">Deliverable</label>
-      <select id="filter-deliverable">
-        <option value="">All deliverables</option>
-      </select>
+    <div class="compact-row">
+      <label class="inline-field inline-field-filter">
+        <span class="inline-label">Discipline</span>
+        <select id="filter-discipline">
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="inline-field inline-field-filter">
+        <span class="inline-label">Deliverable</span>
+        <select id="filter-deliverable">
+          <option value="">All</option>
+        </select>
+      </label>
+      <label class="inline-field inline-field-filter-sm">
+        <span class="inline-label">Include</span>
+        <select id="filter-include">
+          <option value="">All</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </label>
+      <label class="inline-field inline-field-filter-sm">
+        <span class="inline-label">Status</span>
+        <select id="filter-status">
+          <option value="">All</option>
+        </select>
+      </label>
     </div>
-    <div class="filter-group">
-      <label for="filter-include">Include</label>
-      <select id="filter-include">
-        <option value="">All</option>
-        <option value="yes">Yes</option>
-        <option value="no">No</option>
-      </select>
+    <div class="compact-row compact-actions">
+      <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
+      <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
+      <button type="button" id="btn-save" class="btn btn-compact">Save</button>
+      <button type="button" id="btn-export" class="btn btn-compact">Export Included to CSV</button>
+      <button type="button" id="btn-reset" class="btn btn-secondary btn-compact">Reset</button>
+      <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
     </div>
-    <div class="filter-group">
-      <label for="filter-status">Status</label>
-      <select id="filter-status">
-        <option value="">All statuses</option>
-      </select>
-    </div>
-    <button type="button" id="btn-add" class="btn btn-green">Add Activity</button>
-    <button type="button" id="btn-delete" class="btn btn-danger">Delete Selected</button>
-    <button type="button" id="btn-save" class="btn">Save</button>
-    <button type="button" id="btn-export" class="btn">Export Included to CSV</button>
-    <button type="button" id="btn-reset" class="btn btn-secondary">Reset</button>
   </section>
 
   <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
@@ -71,7 +98,7 @@
     <div class="panel-head">
       <div>
         <h2>Activity Builder</h2>
-        <p class="hint">Checkbox controls Include. Final Name/Duration/Hours use custom override when filled, otherwise base value.</p>
+        <p class="hint">Checkbox controls Include. Activity ID shows without project prefix; export adds Project ID prefix. Final Name/Duration/Hours use custom override when filled.</p>
       </div>
       <p class="hint" id="visible-count"></p>
     </div>
@@ -96,7 +123,7 @@
             <th class="col-num">Base Hrs</th>
             <th class="col-num">Custom Hrs</th>
             <th class="col-num">Final Hrs</th>
-            <th>Owner / Lead</th>
+            <th>Activity Owner</th>
             <th>Status</th>
             <th>Lead Notes</th>
           </tr>
@@ -105,6 +132,77 @@
       </table>
     </div>
   </section>
+
+  <div id="manage-lists-modal" class="modal" hidden aria-hidden="true">
+    <div class="modal-backdrop" data-action="close-modal"></div>
+    <div class="modal-dialog modal-dialog-wide" role="dialog" aria-labelledby="manage-lists-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="manage-lists-title">Manage Lists</h2>
+        <button type="button" class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-tabs" role="tablist">
+        <button type="button" class="modal-tab active" data-tab="projects" role="tab" aria-selected="true">Projects</button>
+        <button type="button" class="modal-tab" data-tab="disciplines" role="tab" aria-selected="false">Disciplines</button>
+        <button type="button" class="modal-tab" data-tab="deliverables" role="tab" aria-selected="false">Deliverables</button>
+        <button type="button" class="modal-tab" data-tab="disciplineLeads" role="tab" aria-selected="false">Discipline Leads</button>
+        <button type="button" class="modal-tab" data-tab="activityOwners" role="tab" aria-selected="false">Activity Owners</button>
+      </div>
+      <div class="modal-body">
+        <div id="tab-panel-projects" class="tab-panel active" role="tabpanel">
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="projects">Add Project</button>
+          </div>
+          <ul id="list-editor-projects" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-disciplines" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="disciplines">Add Discipline</button>
+          </div>
+          <ul id="list-editor-disciplines" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-deliverables" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="deliverables">Add Deliverable</button>
+          </div>
+          <ul id="list-editor-deliverables" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-disciplineLeads" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="disciplineLeads">Add Discipline Lead</button>
+          </div>
+          <ul id="list-editor-disciplineLeads" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-activityOwners" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="activityOwners">Add Activity Owner</button>
+          </div>
+          <ul id="list-editor-activityOwners" class="list-editor"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-action="close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-password-modal" class="modal" hidden aria-hidden="true">
+    <div class="modal-backdrop" data-action="cancel-delete"></div>
+    <div class="modal-dialog modal-dialog-narrow" role="dialog" aria-labelledby="delete-password-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="delete-password-title">Confirm Delete</h2>
+        <button type="button" class="modal-close" data-action="cancel-delete" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" id="delete-password-message"></p>
+        <label for="delete-password-input">Password</label>
+        <input id="delete-password-input" type="password" autocomplete="off">
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-delete-confirm" class="btn btn-danger btn-compact">Delete</button>
+        <button type="button" class="btn btn-secondary btn-compact" data-action="cancel-delete">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/app.js"></script>
 </body>

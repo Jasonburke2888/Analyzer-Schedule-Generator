@@ -1,0 +1,22 @@
+---
+description: Analyzer Schedule Generator — edit only this repository
+alwaysApply: true
+---
+
+# Analyzer Schedule Generator — source of truth
+
+This repository (`Analyzer-Schedule-Generator`) is the **only** place to change the public FEL-3 schedule builder app.
+
+## Do
+
+- Edit `index.html`, `css/styles.css`, `js/app.js`, `data/activities.csv`, and `README.md` here.
+- Deploy via GitHub Pages (`.github/workflows/deploy-pages.yml`).
+- Test locally: `python3 -m http.server 8080` from this repo root.
+
+## Do not
+
+- Edit copies under other workspaces (e.g. `acce_sqlite_cursor_project/Analyzer-Schedule-Generator/`). That nested copy is **deprecated** and not deployed.
+
+## Related repo
+
+The Streamlit piping MTO tool lives in `Template_sqlite_cursor_project` (separate product). Schedule Generator changes stay in **this** repo only.

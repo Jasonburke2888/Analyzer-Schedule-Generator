@@ -44,19 +44,86 @@ body {
   opacity: 0.9;
 }
 
-/* Toolbar */
-.toolbar {
-  margin: 16px 24px;
+/* Compact toolbar (Project Setup + Filters + Actions) */
+.compact-toolbar {
+  margin: 8px 16px 6px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: end;
+  border-radius: 8px;
+  padding: 6px 8px;
 }
 
+.compact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 3px 0;
+}
+
+.compact-row + .compact-row {
+  border-top: 1px solid #eef2f7;
+  margin-top: 2px;
+  padding-top: 5px;
+}
+
+.compact-actions {
+  gap: 6px;
+}
+
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+
+.inline-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.inline-field select,
+.inline-field input[type="text"] {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 6px;
+  min-height: 28px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.inline-field-project select { min-width: 160px; }
+.inline-field-id input { width: 72px; }
+.inline-field-client input { width: 100px; }
+.inline-field-stage select { min-width: 88px; }
+.inline-field-lead select { min-width: 110px; }
+.inline-field-filter select { min-width: 130px; }
+.inline-field-filter-sm select { min-width: 72px; }
+
+.btn-compact {
+  padding: 5px 9px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+.modal-dialog-narrow {
+  max-width: 360px;
+}
+
+.modal-body input[type="password"] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* Legacy filter-group (table/modal) */
 .filter-group label {
   font-size: 12px;
   color: var(--muted);
@@ -73,6 +140,32 @@ body {
   background: #fff;
   font-size: 14px;
   color: var(--ink);
+}
+
+.filter-group input[type="text"] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 36px;
+  min-width: 120px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.filter-group-narrow input[type="text"] {
+  min-width: 100px;
+  max-width: 140px;
+}
+
+.btn-small {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+select option.add-option {
+  font-weight: 600;
+  color: var(--blue2);
 }
 
 .btn {
@@ -103,9 +196,9 @@ body {
 }
 
 .status-message {
-  margin: 0 24px 8px;
-  min-height: 1.25rem;
-  font-size: 13px;
+  margin: 0 16px 4px;
+  min-height: 1rem;
+  font-size: 12px;
   color: var(--green);
 }
 
@@ -115,28 +208,28 @@ body {
 
 /* KPI cards */
 .cards {
-  margin: 0 24px 16px;
+  margin: 0 16px 10px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 
 .card-label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .card-kpi {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 2px;
   color: var(--blue);
 }
 
@@ -235,6 +328,12 @@ td select {
   color: var(--ink);
 }
 
+td.col-discipline select,
+td.col-deliverable select,
+td.col-owner select {
+  min-width: 190px;
+}
+
 td textarea {
   width: 100%;
   min-height: 34px;
@@ -259,12 +358,168 @@ td input[type="checkbox"] {
   white-space: nowrap;
 }
 
+/* Manage Lists modal */
+.modal[hidden] {
+  display: none;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal-dialog {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-dialog-wide {
+  max-width: 620px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 16px;
+}
+
+.modal-tab {
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.modal-tab.active {
+  color: var(--blue2);
+  border-bottom-color: var(--blue2);
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.list-editor-toolbar {
+  margin-bottom: 10px;
+}
+
+.list-editor {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.list-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.list-item-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.list-editor-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.modal-body label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 12px 0 4px;
+}
+
+.modal-body label:first-child {
+  margin-top: 0;
+}
+
+.modal-body textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.modal-footer .hint {
+  margin: 0;
+}
+
 @media (max-width: 900px) {
   .cards {
     grid-template-columns: 1fr 1fr;
   }
 
-  .toolbar {
-    align-items: stretch;
+  .compact-row {
+    gap: 6px;
   }
 }
