@@ -1,4 +1,4 @@
-# FEL-3 Analyzer Schedule Template Builder (v2.7)
+# FEL-3 Analyzer Schedule Generator (v2.2)
 
 Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages.
 
