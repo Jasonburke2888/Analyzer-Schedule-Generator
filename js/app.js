@@ -1,5 +1,5 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.4)
+ * FEL-3 Analyzer Schedule Template Builder (v2.5)
  *
  * RENDER / EDIT / SAVE FLOW
  * -------------------------
@@ -56,8 +56,8 @@
     discipline: 140,
     deliverable: 150,
     action: 85,
-    baseName: 240,
-    finalName: 220,
+    deliverable: 150,
+    activityName: 240,
     baseDur: 55,
     customDur: 65,
     baseHrs: 55,
@@ -67,8 +67,8 @@
     notes: 200,
   };
   const COLUMN_ORDER = [
-    'select', 'include', 'activityId', 'discipline', 'deliverable', 'action',
-    'baseName', 'finalName', 'baseDur', 'customDur', 'baseHrs', 'customHrs',
+    'select', 'include', 'activityId', 'discipline', 'action', 'deliverable',
+    'activityName', 'baseDur', 'customDur', 'baseHrs', 'customHrs',
     'owner', 'status', 'notes',
   ];
   const STICKY_COLUMNS = ['include', 'activityId', 'discipline'];
@@ -127,13 +127,36 @@
   // Computed values
   // ---------------------------------------------------------------------------
 
-  function finalName(activity) {
+  const NAME_SEP = ' - ';
+
+  /** Read-only Activity Name = Action + Deliverable (grid/export display). */
+  function computedActivityName(activity) {
     const action = (activity.activityType || '').trim();
     const deliverable = (activity.deliverable || '').trim();
-    if (action && deliverable) return action + ' - ' + deliverable;
+    if (action && deliverable) return action + NAME_SEP + deliverable;
     if (action) return action;
     if (deliverable) return deliverable;
     return '';
+  }
+
+  /** Derive Deliverable from hidden Base Activity Name (activityName field). */
+  function deriveDeliverableFromBaseName(activity) {
+    const base = (activity.activityName || '').trim();
+    if (!base || base.indexOf(NAME_SEP) < 0) return;
+    const sepAt = base.indexOf(NAME_SEP);
+    const leadingAction = base.slice(0, sepAt).trim();
+    const remainder = base.slice(sepAt + NAME_SEP.length).trim();
+    if (!activity.activityType && leadingAction) {
+      activity.activityType = leadingAction;
+    }
+    const action = (activity.activityType || '').trim();
+    if (action && base.startsWith(action + NAME_SEP)) {
+      activity.deliverable = remainder;
+    }
+  }
+
+  function migrateAllActivityNaming(source) {
+    (source || activities).forEach(deriveDeliverableFromBaseName);
   }
 
   function finalDuration(activity) {
@@ -384,6 +407,7 @@
     activities.forEach(function (a) {
       if (a._id >= nextInternalId) nextInternalId = a._id + 1;
     });
+    migrateAllActivityNaming();
     mergeListsFromActivities(activities);
     syncProjectSetupUI();
     renderTable();
@@ -1097,10 +1121,9 @@
     tr.appendChild(buildCheckboxCell('include', activity.include, 'Include in export'));
     tr.appendChild(buildTextCell('activityId', activity.activityId));
     tr.appendChild(buildListSelectCell('discipline', activity.discipline));
-    tr.appendChild(buildListSelectCell('deliverable', activity.deliverable));
     tr.appendChild(buildActionCell(activity.activityType));
-    tr.appendChild(buildTextCell('activityName', activity.activityName));
-    tr.appendChild(buildComputedCell('finalName', finalName(activity)));
+    tr.appendChild(buildListSelectCell('deliverable', activity.deliverable));
+    tr.appendChild(buildComputedCell('activityName', computedActivityName(activity)));
     tr.appendChild(buildReadonlyCell(formatHours(activity.originalDuration)));
     tr.appendChild(buildNumberCell('customDuration', activity.customDuration));
     tr.appendChild(buildReadonlyCell(formatHours(activity.budgetedHours)));
@@ -1127,7 +1150,6 @@
   function buildTextCell(field, value) {
     const td = document.createElement('td');
     if (field === 'activityId') td.dataset.col = 'activityId';
-    if (field === 'activityName') td.dataset.col = 'baseName';
     const input = document.createElement('input');
     input.type = 'text';
     input.dataset.field = field;
@@ -1207,9 +1229,10 @@
 
   function buildComputedCell(name, value) {
     const td = document.createElement('td');
-    td.className = 'computed' + (name === 'finalName' ? ' col-final-name' : '');
+    td.className = 'computed' + (name === 'activityName' ? ' col-activity-name' : '');
     td.dataset.computed = name;
-    if (name === 'finalName') {
+    if (name === 'activityName') {
+      td.dataset.col = 'activityName';
       td.setAttribute('aria-readonly', 'true');
       td.title = value;
     }
@@ -1249,11 +1272,11 @@
   }
 
   function updateRowComputed(tr, activity) {
-    const finalNameEl = tr.querySelector('[data-computed="finalName"]');
-    if (finalNameEl) {
-      const name = finalName(activity);
-      finalNameEl.textContent = name;
-      finalNameEl.title = name;
+    const nameEl = tr.querySelector('[data-computed="activityName"]');
+    if (nameEl) {
+      const name = computedActivityName(activity);
+      nameEl.textContent = name;
+      nameEl.title = name;
     }
     tr.classList.toggle('excluded', !activity.include);
   }
@@ -1502,16 +1525,19 @@
 
     const headers = [
       'Project Name', 'Project ID', 'Client', 'FEL Stage', 'PM',
-      'Activity ID', 'Activity Name', 'Discipline', 'Deliverable', 'Action',
-      'Original Duration', 'Budgeted Hours', 'Discipline Lead', 'Lead Status', 'Lead Notes',
+      'Activity ID', 'Discipline', 'Action', 'Deliverable', 'Activity Name',
+      'Base Duration', 'Custom Duration', 'Base Hours', 'Custom Hours',
+      'Discipline Lead', 'Status', 'Notes',
     ];
     const lines = [headers.join(',')];
     toExport.forEach(function (a) {
       lines.push([
         projectSettings.name, projectSettings.id, projectSettings.client,
         projectSettings.felStage, projectSettings.pm,
-        exportActivityId(a.activityId), finalName(a), a.discipline, a.deliverable, a.activityType,
-        finalDuration(a), finalHours(a), a.owner, a.status, a.leadNotes,
+        exportActivityId(a.activityId), a.discipline, a.activityType, a.deliverable,
+        computedActivityName(a),
+        a.originalDuration, a.customDuration, a.budgetedHours, a.customHours,
+        a.owner, a.status, a.leadNotes,
       ].map(csvEscape).join(','));
     });
 
@@ -1541,6 +1567,7 @@
     try {
       nextInternalId = 1;
       activities = await loadFromCsv();
+      migrateAllActivityNaming();
       mergeListsFromActivities(activities);
       renderTable();
       saveToStorage();
@@ -1658,6 +1685,7 @@
     const stored = loadFromStorage();
     if (stored && stored.length) {
       activities = stored;
+      migrateAllActivityNaming();
       activities.forEach(function (a) { if (a._id >= nextInternalId) nextInternalId = a._id + 1; });
       mergeListsFromActivities(activities);
       syncProjectSetupUI();
@@ -1667,6 +1695,7 @@
       ensureDefaultLists();
       try {
         activities = await loadFromCsv();
+        migrateAllActivityNaming();
         mergeListsFromActivities(activities);
         currentProjectName = projectSettings.name || lists.projects[0];
         projectSettings.name = currentProjectName;
