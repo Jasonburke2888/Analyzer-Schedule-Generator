@@ -1,5 +1,5 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.2)
+ * FEL-3 Analyzer Schedule Template Builder (v2.3)
  *
  * RENDER / EDIT / SAVE FLOW
  * -------------------------
@@ -18,15 +18,20 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'fel3-analyzer-schedule-generator-v3';
+  const STORAGE_KEY = 'fel3-analyzer-schedule-generator-v4';
+  const STORAGE_KEY_LEGACY = 'fel3-analyzer-schedule-generator-v3';
   const CSV_PATH = new URL('data/activities.csv', window.location.href).href;
 
   const ADD_DISCIPLINE = '__add_discipline__';
   const ADD_DELIVERABLE = '__add_deliverable__';
   const ADD_PROJECT = '__add_project__';
+  const ADD_PROJECT_ID = '__add_project_id__';
+  const ADD_ACTION = '__add_action__';
+  const ADD_PM = '__add_pm__';
   const ADD_OWNER = '__add_owner__';
 
   const DEFAULT_PROJECTS = ['FEL-3 Analyzer Template'];
+  const DEFAULT_PROJECT_IDS = ['1517', '1607'];
   const DEFAULT_DISCIPLINES = [
     'Engineering', 'PMAC', 'Process', 'Mechanical', 'Electrical', 'Instrumentation',
     'Civil', 'Structural', 'Project Controls', 'Procurement', 'Construction',
@@ -36,11 +41,31 @@
     'Instrument Index', 'Plot Plan', 'Model Review', 'Estimate', 'Schedule',
     'Procurement', 'Construction Support',
   ];
-  const DEFAULT_DISCIPLINE_LEADS = ['Unassigned', 'Joe Smith', 'Other'];
+  const DEFAULT_ACTIONS = [
+    'Develop', 'Perform', 'Issue', 'Review', 'Incorporate', 'Approved', 'Finalize', 'Custom',
+  ];
+  const DEFAULT_PMS = ['Unassigned', 'Joe Smith', 'Other'];
   const DEFAULT_ACTIVITY_OWNERS = [
     'Unassigned', 'Process', 'Mechanical', 'Electrical', 'Instrumentation', 'Civil',
     'Structural', 'PMAC', 'Project Controls', 'Procurement', 'Construction', 'Other',
   ];
+  const DEFAULT_COLUMN_WIDTHS = {
+    select: 36,
+    include: 55,
+    activityId: 75,
+    discipline: 150,
+    deliverable: 160,
+    action: 90,
+    baseName: 180,
+    finalName: 300,
+    baseDur: 60,
+    customDur: 70,
+    baseHrs: 60,
+    customHrs: 70,
+    owner: 120,
+    status: 90,
+    notes: 250,
+  };
   const FEL_STAGES = ['FEL-1', 'FEL-2', 'FEL-3', 'FEL-4', 'Construction'];
   const STATUS_OPTIONS = [
     'Not Started', 'In Progress', 'Lead Review', 'Complete', 'Hold', 'Delete / Exclude',
@@ -50,9 +75,11 @@
   let nextInternalId = 1;
   let lists = {
     projects: [],
+    projectIds: [],
     disciplines: [],
     deliverables: [],
-    disciplineLeads: [],
+    actions: [],
+    pms: [],
     activityOwners: [],
   };
   let projectSettings = {
@@ -60,21 +87,25 @@
     id: '',
     client: '',
     felStage: 'FEL-3',
-    disciplineLead: 'Unassigned',
+    pm: 'Unassigned',
   };
+  let columnWidths = {};
   let activeManageTab = 'projects';
+  let resizeState = null;
 
   const tbody = document.getElementById('activities-body');
   const table = document.getElementById('schedule-table');
+  const colgroup = document.getElementById('schedule-cols');
   const statusMessage = document.getElementById('status-message');
   const visibleCountEl = document.getElementById('visible-count');
   const projectSelect = document.getElementById('project-select');
-  const projectIdInput = document.getElementById('project-id');
+  const projectIdSelect = document.getElementById('project-id-select');
   const projectClientInput = document.getElementById('project-client');
   const projectFelStageSelect = document.getElementById('project-fel-stage');
-  const disciplineLeadSelect = document.getElementById('discipline-lead-select');
+  const pmSelect = document.getElementById('pm-select');
   const filterDiscipline = document.getElementById('filter-discipline');
   const filterDeliverable = document.getElementById('filter-deliverable');
+  const filterAction = document.getElementById('filter-action');
   const filterInclude = document.getElementById('filter-include');
   const filterStatus = document.getElementById('filter-status');
   const selectAllCheckbox = document.getElementById('select-all');
@@ -89,8 +120,12 @@
   // ---------------------------------------------------------------------------
 
   function finalName(activity) {
-    const custom = (activity.customActivityName || '').trim();
-    return custom || activity.activityName || '';
+    const action = (activity.activityType || '').trim();
+    const deliverable = (activity.deliverable || '').trim();
+    if (action && deliverable) return action + ' - ' + deliverable;
+    if (action) return action;
+    if (deliverable) return deliverable;
+    return '';
   }
 
   function finalDuration(activity) {
@@ -284,45 +319,72 @@
 
   function ensureDefaultLists() {
     if (!lists.projects.length) lists.projects = DEFAULT_PROJECTS.slice();
+    if (!lists.projectIds.length) lists.projectIds = DEFAULT_PROJECT_IDS.slice();
     if (!lists.disciplines.length) lists.disciplines = DEFAULT_DISCIPLINES.slice();
     if (!lists.deliverables.length) lists.deliverables = DEFAULT_DELIVERABLES.slice();
-    if (!lists.disciplineLeads.length) lists.disciplineLeads = DEFAULT_DISCIPLINE_LEADS.slice();
+    if (!lists.actions.length) lists.actions = DEFAULT_ACTIONS.slice();
+    if (!lists.pms.length) lists.pms = DEFAULT_PMS.slice();
     if (!lists.activityOwners.length) lists.activityOwners = DEFAULT_ACTIVITY_OWNERS.slice();
     if (!projectSettings.name && lists.projects.length) {
       projectSettings.name = lists.projects[0];
     }
+    if (!projectSettings.id && lists.projectIds.length) {
+      projectSettings.id = lists.projectIds[0];
+    }
     if (!projectSettings.felStage) projectSettings.felStage = 'FEL-3';
-    if (!projectSettings.disciplineLead) projectSettings.disciplineLead = 'Unassigned';
+    if (!projectSettings.pm) projectSettings.pm = 'Unassigned';
   }
 
   function mergeListsFromActivities(source) {
     const rows = source || activities;
     lists.disciplines = sortUnique(lists.disciplines.concat(rows.map(function (a) { return a.discipline; })));
     lists.deliverables = sortUnique(lists.deliverables.concat(rows.map(function (a) { return a.deliverable; })));
+    lists.actions = sortUnique(lists.actions.concat(rows.map(function (a) { return a.activityType; })));
     lists.activityOwners = sortUnique(lists.activityOwners.concat(rows.map(function (a) { return a.owner; })));
+  }
+
+  function migrateParsedStorage(parsed) {
+    if (parsed.lists) {
+      lists.projects = Array.isArray(parsed.lists.projects) ? parsed.lists.projects : [];
+      lists.projectIds = Array.isArray(parsed.lists.projectIds) ? parsed.lists.projectIds : [];
+      lists.disciplines = Array.isArray(parsed.lists.disciplines) ? parsed.lists.disciplines : [];
+      lists.deliverables = Array.isArray(parsed.lists.deliverables) ? parsed.lists.deliverables : [];
+      lists.actions = Array.isArray(parsed.lists.actions) ? parsed.lists.actions : [];
+      lists.pms = Array.isArray(parsed.lists.pms) ? parsed.lists.pms : [];
+      lists.activityOwners = Array.isArray(parsed.lists.activityOwners) ? parsed.lists.activityOwners : [];
+      if (!lists.pms.length && Array.isArray(parsed.lists.disciplineLeads)) {
+        lists.pms = parsed.lists.disciplineLeads.slice();
+      }
+      if (!lists.actions.length && Array.isArray(parsed.lists.activityTypes)) {
+        lists.actions = parsed.lists.activityTypes.slice();
+      }
+      if (!lists.projectIds.length && parsed.project && parsed.project.id) {
+        lists.projectIds = [String(parsed.project.id)];
+      }
+    }
+    if (parsed.project) {
+      projectSettings.name = parsed.project.name || '';
+      projectSettings.id = parsed.project.id || '';
+      projectSettings.client = parsed.project.client || '';
+      projectSettings.felStage = parsed.project.felStage || 'FEL-3';
+      projectSettings.pm = parsed.project.pm || parsed.project.disciplineLead || 'Unassigned';
+    }
+    if (parsed.columnWidths && typeof parsed.columnWidths === 'object') {
+      columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS, parsed.columnWidths);
+    } else {
+      columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS);
+    }
   }
 
   function loadFromStorage() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      let raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) raw = localStorage.getItem(STORAGE_KEY_LEGACY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed.activities)) return null;
       nextInternalId = parsed.nextInternalId || 1;
-      if (parsed.lists) {
-        lists.projects = Array.isArray(parsed.lists.projects) ? parsed.lists.projects : [];
-        lists.disciplines = Array.isArray(parsed.lists.disciplines) ? parsed.lists.disciplines : [];
-        lists.deliverables = Array.isArray(parsed.lists.deliverables) ? parsed.lists.deliverables : [];
-        lists.disciplineLeads = Array.isArray(parsed.lists.disciplineLeads) ? parsed.lists.disciplineLeads : [];
-        lists.activityOwners = Array.isArray(parsed.lists.activityOwners) ? parsed.lists.activityOwners : [];
-      }
-      if (parsed.project) {
-        projectSettings.name = parsed.project.name || '';
-        projectSettings.id = parsed.project.id || '';
-        projectSettings.client = parsed.project.client || '';
-        projectSettings.felStage = parsed.project.felStage || 'FEL-3';
-        projectSettings.disciplineLead = parsed.project.disciplineLead || 'Unassigned';
-      }
+      migrateParsedStorage(parsed);
       ensureDefaultLists();
       const rows = parsed.activities.map(rehydrateActivity);
       rows.forEach(function (a) {
@@ -340,16 +402,17 @@
       activities: activities,
       lists: lists,
       project: projectSettings,
+      columnWidths: columnWidths,
       savedAt: new Date().toISOString(),
     }));
   }
 
   function syncProjectSetupUI() {
-    projectIdInput.value = projectSettings.id || '';
     projectClientInput.value = projectSettings.client || '';
     populateFelStageSelect();
-    populateDisciplineLeadSelect();
+    populatePmSelect();
     populateProjectSelect();
+    populateProjectIdSelect();
   }
 
   function populateFelStageSelect() {
@@ -363,15 +426,34 @@
     });
   }
 
-  function getDisciplineLeadOptions() {
-    return sortUnique(lists.disciplineLeads.concat([projectSettings.disciplineLead]));
+  function getPmOptions() {
+    return sortUnique(lists.pms.concat([projectSettings.pm]));
   }
 
-  function populateDisciplineLeadSelect() {
-    fillListSelect(disciplineLeadSelect, getDisciplineLeadOptions(), {
+  function populatePmSelect() {
+    fillListSelect(pmSelect, getPmOptions(), {
       blankLabel: undefined,
-      currentValue: projectSettings.disciplineLead || 'Unassigned',
+      currentValue: projectSettings.pm || 'Unassigned',
+      addValue: ADD_PM,
+      addLabel: '+ Add PM...',
     });
+  }
+
+  function getProjectIdOptions() {
+    return sortUnique(lists.projectIds.concat([projectSettings.id]));
+  }
+
+  function populateProjectIdSelect() {
+    fillListSelect(projectIdSelect, getProjectIdOptions(), {
+      blankLabel: '—',
+      currentValue: projectSettings.id || '',
+      addValue: ADD_PROJECT_ID,
+      addLabel: '+ Add Project ID...',
+    });
+  }
+
+  function getActionOptions(currentValue) {
+    return sortUnique(lists.actions.concat([currentValue]));
   }
 
   // ---------------------------------------------------------------------------
@@ -443,15 +525,14 @@
   function refreshListDropdowns() {
     populateFilterOptions();
     populateProjectSelect();
-    populateDisciplineLeadSelect();
+    populateProjectIdSelect();
+    populatePmSelect();
     tbody.querySelectorAll('select[data-field="discipline"]').forEach(function (sel) {
       const activity = getActivityByRow(sel.closest('tr'));
       if (activity) {
         fillListSelect(sel, getDisciplineOptions(activity.discipline), {
-          blankLabel: '',
-          currentValue: activity.discipline,
-          addValue: ADD_DISCIPLINE,
-          addLabel: '+ Add Discipline...',
+          blankLabel: '', currentValue: activity.discipline,
+          addValue: ADD_DISCIPLINE, addLabel: '+ Add Discipline...',
         });
       }
     });
@@ -459,10 +540,17 @@
       const activity = getActivityByRow(sel.closest('tr'));
       if (activity) {
         fillListSelect(sel, getDeliverableOptions(activity.deliverable), {
-          blankLabel: '',
-          currentValue: activity.deliverable,
-          addValue: ADD_DELIVERABLE,
-          addLabel: '+ Add Deliverable...',
+          blankLabel: '', currentValue: activity.deliverable,
+          addValue: ADD_DELIVERABLE, addLabel: '+ Add Deliverable...',
+        });
+      }
+    });
+    tbody.querySelectorAll('select[data-field="activityType"]').forEach(function (sel) {
+      const activity = getActivityByRow(sel.closest('tr'));
+      if (activity) {
+        fillListSelect(sel, getActionOptions(activity.activityType), {
+          blankLabel: '', currentValue: activity.activityType,
+          addValue: ADD_ACTION, addLabel: '+ Add Action...',
         });
       }
     });
@@ -501,12 +589,16 @@
     if (listKey === 'projects' && projectSettings.name === oldName) {
       projectSettings.name = newName;
     }
-    if (listKey === 'disciplineLeads' && projectSettings.disciplineLead === oldName) {
-      projectSettings.disciplineLead = newName;
+    if (listKey === 'projectIds' && projectSettings.id === oldName) {
+      projectSettings.id = newName;
+    }
+    if (listKey === 'pms' && projectSettings.pm === oldName) {
+      projectSettings.pm = newName;
     }
     const fieldMap = {
       disciplines: 'discipline',
       deliverables: 'deliverable',
+      actions: 'activityType',
       activityOwners: 'owner',
     };
     const field = fieldMap[listKey];
@@ -525,16 +617,23 @@
       showStatus('At least one project must remain.', true);
       return false;
     }
-    if (listKey === 'disciplineLeads' && lists.disciplineLeads.length <= 1) {
-      showStatus('At least one discipline lead must remain.', true);
+    if (listKey === 'projectIds' && lists.projectIds.length <= 1) {
+      showStatus('At least one project ID must remain.', true);
+      return false;
+    }
+    if (listKey === 'pms' && lists.pms.length <= 1) {
+      showStatus('At least one PM must remain.', true);
       return false;
     }
     lists[listKey].splice(idx, 1);
     if (listKey === 'projects' && projectSettings.name === name) {
       projectSettings.name = lists.projects[0] || '';
     }
-    if (listKey === 'disciplineLeads' && projectSettings.disciplineLead === name) {
-      projectSettings.disciplineLead = lists.disciplineLeads[0] || 'Unassigned';
+    if (listKey === 'projectIds' && projectSettings.id === name) {
+      projectSettings.id = lists.projectIds[0] || '';
+    }
+    if (listKey === 'pms' && projectSettings.pm === name) {
+      projectSettings.pm = lists.pms[0] || 'Unassigned';
     }
     return true;
   }
@@ -571,7 +670,7 @@
   }
 
   function renderListEditors() {
-    ['projects', 'disciplines', 'deliverables', 'disciplineLeads', 'activityOwners'].forEach(function (listKey) {
+    ['projects', 'projectIds', 'disciplines', 'deliverables', 'actions', 'pms'].forEach(function (listKey) {
       const ul = document.getElementById('list-editor-' + listKey);
       ul.innerHTML = '';
       lists[listKey].forEach(function (name) {
@@ -615,10 +714,11 @@
   function handleAddListItem(listKey) {
     const labels = {
       projects: 'New project name:',
+      projectIds: 'New project ID:',
       disciplines: 'New discipline name:',
       deliverables: 'New deliverable name:',
-      disciplineLeads: 'New discipline lead name:',
-      activityOwners: 'New activity owner name:',
+      actions: 'New action name:',
+      pms: 'New PM name:',
     };
     const name = promptNewListItem(labels[listKey]);
     if (!name) return;
@@ -628,7 +728,8 @@
     }
     addToList(listKey, name);
     if (listKey === 'projects') projectSettings.name = name;
-    if (listKey === 'disciplineLeads') projectSettings.disciplineLead = name;
+    if (listKey === 'projectIds') projectSettings.id = name;
+    if (listKey === 'pms') projectSettings.pm = name;
     renderListEditors();
     refreshListDropdowns();
     syncProjectSetupUI();
@@ -702,6 +803,100 @@
     showStatus('Project "' + name + '" added.');
   }
 
+  function handleAddProjectIdFromSelect() {
+    const name = promptNewListItem('New project ID:');
+    if (!name) { projectIdSelect.value = projectSettings.id || ''; return; }
+    addToList('projectIds', name);
+    projectSettings.id = name;
+    syncProjectSetupUI();
+    saveToStorage();
+    showStatus('Project ID "' + name + '" added.');
+  }
+
+  function handleAddPmFromSelect() {
+    const name = promptNewListItem('New PM name:');
+    if (!name) { pmSelect.value = projectSettings.pm || ''; return; }
+    addToList('pms', name);
+    projectSettings.pm = name;
+    syncProjectSetupUI();
+    saveToStorage();
+    showStatus('PM "' + name + '" added.');
+  }
+
+  function handleAddActionFromSelect(selectEl, activity) {
+    const name = promptNewListItem('New action name:');
+    if (!name) { selectEl.value = activity.activityType || ''; return; }
+    addToList('actions', name);
+    activity.activityType = name;
+    refreshListDropdowns();
+    saveToStorage();
+    applyFilters();
+    updateSummary();
+    const tr = selectEl.closest('tr');
+    if (tr) updateRowComputed(tr, activity);
+    showStatus('Action "' + name + '" added.');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Column widths
+  // ---------------------------------------------------------------------------
+
+  function getColumnWidth(key) {
+    return columnWidths[key] || DEFAULT_COLUMN_WIDTHS[key] || 80;
+  }
+
+  function applyColumnWidths() {
+    if (!colgroup) return;
+    colgroup.innerHTML = '';
+    table.querySelectorAll('thead th[data-col]').forEach(function (th) {
+      const key = th.dataset.col;
+      const w = getColumnWidth(key);
+      const col = document.createElement('col');
+      col.style.width = w + 'px';
+      col.dataset.col = key;
+      colgroup.appendChild(col);
+      th.style.width = w + 'px';
+    });
+  }
+
+  function initColumnResizers() {
+    table.querySelectorAll('thead th[data-col]').forEach(function (th) {
+      const key = th.dataset.col;
+      if (key === 'select') return;
+      let handle = th.querySelector('.col-resizer');
+      if (!handle) {
+        handle = document.createElement('span');
+        handle.className = 'col-resizer';
+        handle.setAttribute('aria-hidden', 'true');
+        th.appendChild(handle);
+      }
+      handle.onmousedown = function (event) {
+        event.preventDefault();
+        resizeState = {
+          key: key,
+          startX: event.clientX,
+          startWidth: getColumnWidth(key),
+        };
+        document.body.classList.add('col-resizing');
+      };
+    });
+  }
+
+  function onColumnResizeMove(event) {
+    if (!resizeState) return;
+    const delta = event.clientX - resizeState.startX;
+    const next = Math.max(40, resizeState.startWidth + delta);
+    columnWidths[resizeState.key] = next;
+    applyColumnWidths();
+  }
+
+  function onColumnResizeEnd() {
+    if (!resizeState) return;
+    resizeState = null;
+    document.body.classList.remove('col-resizing');
+    saveToStorage();
+  }
+
   // ---------------------------------------------------------------------------
   // Render table
   // ---------------------------------------------------------------------------
@@ -713,6 +908,8 @@
       fragment.appendChild(buildRow(activity));
     });
     tbody.appendChild(fragment);
+    applyColumnWidths();
+    initColumnResizers();
     applyFilters();
     updateSummary();
     refreshListDropdowns();
@@ -729,16 +926,13 @@
     tr.appendChild(buildTextCell('activityId', activity.activityId));
     tr.appendChild(buildListSelectCell('discipline', activity.discipline));
     tr.appendChild(buildListSelectCell('deliverable', activity.deliverable));
-    tr.appendChild(buildTextCell('activityType', activity.activityType));
+    tr.appendChild(buildActionCell(activity.activityType));
     tr.appendChild(buildTextCell('activityName', activity.activityName));
-    tr.appendChild(buildTextCell('customActivityName', activity.customActivityName));
     tr.appendChild(buildComputedCell('finalName', finalName(activity)));
     tr.appendChild(buildReadonlyCell(formatHours(activity.originalDuration)));
     tr.appendChild(buildNumberCell('customDuration', activity.customDuration));
-    tr.appendChild(buildComputedCell('finalDur', finalDuration(activity)));
     tr.appendChild(buildReadonlyCell(formatHours(activity.budgetedHours)));
     tr.appendChild(buildNumberCell('customHours', activity.customHours));
-    tr.appendChild(buildComputedCell('finalHrs', finalHours(activity)));
     tr.appendChild(buildOwnerCell(activity.owner));
     tr.appendChild(buildStatusCell(activity.status));
     tr.appendChild(buildNotesCell(activity.leadNotes));
@@ -764,6 +958,19 @@
     input.dataset.field = field;
     input.value = value ?? '';
     td.appendChild(input);
+    return td;
+  }
+
+  function buildActionCell(value) {
+    const td = document.createElement('td');
+    td.className = 'col-action';
+    const select = document.createElement('select');
+    select.dataset.field = 'activityType';
+    fillListSelect(select, getActionOptions(value), {
+      blankLabel: '', currentValue: value || '',
+      addValue: ADD_ACTION, addLabel: '+ Add Action...',
+    });
+    td.appendChild(select);
     return td;
   }
 
@@ -823,9 +1030,13 @@
 
   function buildComputedCell(name, value) {
     const td = document.createElement('td');
-    td.className = 'computed';
+    td.className = 'computed' + (name === 'finalName' ? ' col-final-name' : '');
     td.dataset.computed = name;
-    td.textContent = name === 'finalHrs' ? formatHours(value) : String(value);
+    if (name === 'finalName') {
+      td.setAttribute('aria-readonly', 'true');
+      td.title = value;
+    }
+    td.textContent = String(value);
     return td;
   }
 
@@ -856,11 +1067,11 @@
 
   function updateRowComputed(tr, activity) {
     const finalNameEl = tr.querySelector('[data-computed="finalName"]');
-    const finalDurEl = tr.querySelector('[data-computed="finalDur"]');
-    const finalHrsEl = tr.querySelector('[data-computed="finalHrs"]');
-    if (finalNameEl) finalNameEl.textContent = finalName(activity);
-    if (finalDurEl) finalDurEl.textContent = String(finalDuration(activity));
-    if (finalHrsEl) finalHrsEl.textContent = formatHours(finalHours(activity));
+    if (finalNameEl) {
+      const name = finalName(activity);
+      finalNameEl.textContent = name;
+      finalNameEl.title = name;
+    }
     tr.classList.toggle('excluded', !activity.include);
   }
 
@@ -896,6 +1107,10 @@
     }
     if (control.dataset.field === 'deliverable' && control.value === ADD_DELIVERABLE) {
       handleAddDeliverableFromSelect(control, activity);
+      return;
+    }
+    if (control.dataset.field === 'activityType' && control.value === ADD_ACTION) {
+      handleAddActionFromSelect(control, activity);
       return;
     }
     if (control.dataset.field === 'owner' && control.value === ADD_OWNER) {
@@ -939,19 +1154,26 @@
     return {
       discipline: filterDiscipline.value,
       deliverable: filterDeliverable.value,
+      action: filterAction.value,
       include: filterInclude.value,
       status: filterStatus.value,
     };
   }
 
   function rowMatchesFilters(activity) {
+    if (!activity) return false;
     const f = getFilterValues();
     if (f.discipline && activity.discipline !== f.discipline) return false;
     if (f.deliverable && activity.deliverable !== f.deliverable) return false;
+    if (f.action && activity.activityType !== f.action) return false;
     if (f.include === 'yes' && !activity.include) return false;
     if (f.include === 'no' && activity.include) return false;
     if (f.status && activity.status !== f.status) return false;
     return true;
+  }
+
+  function getFilteredActivities() {
+    return activities.filter(rowMatchesFilters);
   }
 
   function applyFilters() {
@@ -964,6 +1186,7 @@
     });
     visibleCountEl.textContent = visible + ' visible of ' + activities.length + ' total';
     selectAllCheckbox.checked = false;
+    updateSummary();
   }
 
   function uniqueValues(field, fallback) {
@@ -991,14 +1214,16 @@
   function populateFilterOptions() {
     populateSelect(filterDiscipline, sortUnique(lists.disciplines.concat(uniqueValues('discipline'))), 'All');
     populateSelect(filterDeliverable, sortUnique(lists.deliverables.concat(uniqueValues('deliverable'))), 'All');
+    populateSelect(filterAction, sortUnique(lists.actions.concat(uniqueValues('activityType'))), 'All');
     populateSelect(filterStatus, uniqueValues('status', STATUS_OPTIONS), 'All');
   }
 
   function updateSummary() {
-    const included = activities.filter(function (a) { return a.include; });
+    const visible = getFilteredActivities();
+    const included = visible.filter(function (a) { return a.include; });
     const includedHours = included.reduce(function (sum, a) { return sum + finalHours(a); }, 0);
     const disciplines = new Set(included.map(function (a) { return a.discipline; }).filter(Boolean));
-    const reviewHold = activities.filter(function (a) {
+    const reviewHold = visible.filter(function (a) {
       return a.include && (a.status === 'Lead Review' || a.status === 'Hold');
     }).length;
 
@@ -1006,12 +1231,6 @@
     document.getElementById('kpi-hours').textContent = formatHours(includedHours);
     document.getElementById('kpi-disciplines').textContent = String(disciplines.size);
     document.getElementById('kpi-review').textContent = String(reviewHold);
-
-    let visible = 0;
-    tbody.querySelectorAll('tr:not(.row-hidden)').forEach(function () { visible++; });
-    if (activities.length) {
-      visibleCountEl.textContent = visible + ' visible of ' + activities.length + ' total';
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1034,9 +1253,8 @@
       activityId: nextActivityId(),
       discipline: filterDiscipline.value || '',
       deliverable: filterDeliverable.value || '',
-      activityType: 'Custom',
+      activityType: filterAction.value || 'Develop',
       activityName: '',
-      customActivityName: 'New custom activity',
       status: 'Not Started',
     }));
     renderTable();
@@ -1091,26 +1309,31 @@
   }
 
   function exportIncludedCsv() {
-    const included = activities.filter(function (a) { return a.include; });
-    if (!included.length) { showStatus('No included activities to export.', true); return; }
+    const toExport = activities.filter(function (a) {
+      return a.include && rowMatchesFilters(a);
+    });
+    if (!toExport.length) {
+      showStatus('No included, visible activities to export for current filters.', true);
+      return;
+    }
 
     const headers = [
-      'Project Name', 'Project ID', 'Client', 'FEL Stage', 'Discipline Lead',
-      'Activity ID', 'Activity Name', 'Discipline', 'Deliverable', 'Activity Type',
+      'Project Name', 'Project ID', 'Client', 'FEL Stage', 'PM',
+      'Activity ID', 'Activity Name', 'Discipline', 'Deliverable', 'Action',
       'Original Duration', 'Budgeted Hours', 'Activity Owner', 'Lead Status', 'Lead Notes',
     ];
     const lines = [headers.join(',')];
-    included.forEach(function (a) {
+    toExport.forEach(function (a) {
       lines.push([
         projectSettings.name, projectSettings.id, projectSettings.client,
-        projectSettings.felStage, projectSettings.disciplineLead,
+        projectSettings.felStage, projectSettings.pm,
         exportActivityId(a.activityId), finalName(a), a.discipline, a.deliverable, a.activityType,
         finalDuration(a), finalHours(a), a.owner, a.status, a.leadNotes,
       ].map(csvEscape).join(','));
     });
 
     downloadFile('FEL3_Analyzer_Included_Activities.csv', lines.join('\n'));
-    showStatus('Exported ' + included.length + ' included activities.');
+    showStatus('Exported ' + toExport.length + ' included activities (filtered view).');
   }
 
   function csvEscape(value) {
@@ -1154,14 +1377,26 @@
   }
 
   function handleProjectSetupChange() {
-    projectSettings.id = projectIdInput.value.trim();
     projectSettings.client = projectClientInput.value.trim();
     projectSettings.felStage = projectFelStageSelect.value;
     saveToStorage();
   }
 
-  function handleDisciplineLeadChange() {
-    projectSettings.disciplineLead = disciplineLeadSelect.value || 'Unassigned';
+  function handleProjectIdChange() {
+    if (projectIdSelect.value === ADD_PROJECT_ID) {
+      handleAddProjectIdFromSelect();
+      return;
+    }
+    projectSettings.id = projectIdSelect.value.trim();
+    saveToStorage();
+  }
+
+  function handlePmChange() {
+    if (pmSelect.value === ADD_PM) {
+      handleAddPmFromSelect();
+      return;
+    }
+    projectSettings.pm = pmSelect.value || 'Unassigned';
     saveToStorage();
   }
 
@@ -1180,6 +1415,10 @@
   // ---------------------------------------------------------------------------
 
   async function init() {
+    columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS);
+    document.addEventListener('mousemove', onColumnResizeMove);
+    document.addEventListener('mouseup', onColumnResizeEnd);
+
     table.addEventListener('change', handleTableChange);
     table.addEventListener('blur', handleTableBlur, true);
     table.addEventListener('input', handleTableInput);
@@ -1206,12 +1445,11 @@
     selectAllCheckbox.addEventListener('change', handleSelectAll);
 
     projectSelect.addEventListener('change', handleProjectSelectChange);
-    projectIdInput.addEventListener('change', handleProjectSetupChange);
-    projectIdInput.addEventListener('blur', handleProjectSetupChange);
+    projectIdSelect.addEventListener('change', handleProjectIdChange);
     projectClientInput.addEventListener('change', handleProjectSetupChange);
     projectClientInput.addEventListener('blur', handleProjectSetupChange);
     projectFelStageSelect.addEventListener('change', handleProjectSetupChange);
-    disciplineLeadSelect.addEventListener('change', handleDisciplineLeadChange);
+    pmSelect.addEventListener('change', handlePmChange);
 
     manageModal.addEventListener('click', function (event) {
       const action = event.target.dataset.action;
@@ -1225,7 +1463,7 @@
       btn.addEventListener('click', function () { switchManageTab(btn.dataset.tab); });
     });
 
-    [filterDiscipline, filterDeliverable, filterInclude, filterStatus].forEach(function (el) {
+    [filterDiscipline, filterDeliverable, filterAction, filterInclude, filterStatus].forEach(function (el) {
       el.addEventListener('change', applyFilters);
     });
 

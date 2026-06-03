@@ -23,52 +23,66 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.35;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* Header — gradient from reference */
 .app-header {
   background: linear-gradient(135deg, var(--blue), #123550);
   color: #fff;
-  padding: 22px 28px;
+  padding: 10px 16px;
+  flex-shrink: 0;
 }
 
 .app-header h1 {
-  margin: 0 0 6px;
-  font-size: 24px;
+  margin: 0 0 2px;
+  font-size: 18px;
 }
 
 .app-header p {
   margin: 0;
   opacity: 0.9;
+  font-size: 12px;
+}
+
+.app-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Compact toolbar (Project Setup + Filters + Actions) */
 .compact-toolbar {
-  margin: 8px 16px 6px;
+  margin: 4px 10px 2px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 6px 8px;
+  border-radius: 6px;
+  padding: 4px 6px;
+  flex-shrink: 0;
 }
 
 .compact-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  padding: 3px 0;
+  gap: 4px 8px;
+  padding: 2px 0;
 }
 
 .compact-row + .compact-row {
   border-top: 1px solid #eef2f7;
-  margin-top: 2px;
-  padding-top: 5px;
+  margin-top: 1px;
+  padding-top: 3px;
 }
 
-.compact-actions {
-  gap: 6px;
+.compact-row-actions {
+  gap: 4px 6px;
 }
 
 .inline-field {
@@ -88,26 +102,26 @@ body {
 .inline-field select,
 .inline-field input[type="text"] {
   border: 1px solid var(--line);
-  border-radius: 5px;
-  padding: 3px 6px;
-  min-height: 28px;
-  font-size: 13px;
+  border-radius: 4px;
+  padding: 2px 5px;
+  min-height: 24px;
+  font-size: 12px;
   background: #fff;
   color: var(--ink);
 }
 
-.inline-field-project select { min-width: 160px; }
-.inline-field-id input { width: 72px; }
-.inline-field-client input { width: 100px; }
-.inline-field-stage select { min-width: 88px; }
-.inline-field-lead select { min-width: 110px; }
-.inline-field-filter select { min-width: 130px; }
-.inline-field-filter-sm select { min-width: 72px; }
+.inline-field-project select { min-width: 140px; }
+.inline-field-id select { min-width: 72px; }
+.inline-field-client input { width: 90px; }
+.inline-field-stage select { min-width: 80px; }
+.inline-field-pm select { min-width: 100px; }
+.inline-field-filter select { min-width: 110px; }
+.inline-field-filter-sm select { min-width: 68px; }
 
 .btn-compact {
-  padding: 5px 9px;
-  font-size: 12px;
-  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 11px;
+  border-radius: 4px;
 }
 
 .modal-dialog-narrow {
@@ -196,100 +210,139 @@ select option.add-option {
 }
 
 .status-message {
-  margin: 0 16px 4px;
-  min-height: 1rem;
-  font-size: 12px;
+  margin: 0 10px 2px;
+  min-height: 0.9rem;
+  font-size: 11px;
   color: var(--green);
+  flex-shrink: 0;
 }
 
 .status-message.error {
   color: var(--red);
 }
 
-/* KPI cards */
 .cards {
-  margin: 0 16px 10px;
+  margin: 0 10px 4px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
 }
 
 .card-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .card-kpi {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
-  margin-top: 2px;
+  margin-top: 0;
   color: var(--blue);
 }
 
-/* Panel + table */
 .panel {
-  margin: 0 24px 24px;
+  margin: 0 10px 8px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
 .panel-head {
-  padding: 12px 14px;
+  padding: 6px 10px;
+  flex-shrink: 0;
   border-bottom: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .panel-head h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .hint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 11px;
   margin: 0;
 }
 
 .table-wrap {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  max-height: 65vh;
+  max-height: none;
 }
 
 table {
   border-collapse: collapse;
   width: 100%;
-  min-width: 1600px;
+  table-layout: fixed;
 }
 
 th,
 td {
   border-bottom: 1px solid #eef2f7;
-  padding: 8px;
-  vertical-align: top;
+  padding: 2px 4px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
   background: #eef5fb;
   text-align: left;
-  font-size: 12px;
+  font-size: 10px;
   color: #344054;
   white-space: nowrap;
+  user-select: none;
+}
+
+.th-label {
+  display: inline-block;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+th .col-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+}
+
+body.col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.col-final-name {
+  font-weight: 600;
+  color: #344054;
+  background: #f8fafc;
 }
 
 tbody tr:hover {
@@ -320,42 +373,38 @@ td input[type="number"],
 td select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px 8px;
-  min-height: 34px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-height: 22px;
+  font-size: 11px;
   background: #fff;
-  font: inherit;
   color: var(--ink);
 }
 
 td.col-discipline select,
 td.col-deliverable select,
+td.col-action select,
 td.col-owner select {
-  min-width: 190px;
+  min-width: 0;
 }
 
 td textarea {
-  width: 100%;
-  min-height: 34px;
-  resize: vertical;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 7px;
-  font-family: inherit;
-  font-size: inherit;
+  min-height: 22px;
+  padding: 2px 4px;
+  font-size: 11px;
+  line-height: 1.25;
 }
 
 td input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--blue2);
+  width: 16px;
+  height: 16px;
 }
 
 .computed {
   font-weight: 600;
   color: #344054;
   white-space: nowrap;
+  font-size: 11px;
 }
 
 /* Manage Lists modal */

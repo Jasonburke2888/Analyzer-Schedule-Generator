@@ -9,129 +9,125 @@
 <body>
   <header class="app-header">
     <h1>FEL-3 Analyzer Schedule Template Builder</h1>
-    <p>Customize activities, include/exclude scope, override names/durations/hours, collect lead notes, then export CSV for P6 prep.</p>
+    <p>Customize activities, include/exclude scope, override durations/hours, collect notes, then export CSV for P6 prep.</p>
   </header>
 
-  <section class="compact-toolbar" aria-label="Project setup, filters, and actions">
-    <div class="compact-row">
-      <label class="inline-field inline-field-project">
-        <span class="inline-label">Project</span>
-        <select id="project-select"></select>
-      </label>
-      <label class="inline-field inline-field-id">
-        <span class="inline-label">ID</span>
-        <input id="project-id" type="text" placeholder="1517">
-      </label>
-      <label class="inline-field inline-field-client">
-        <span class="inline-label">Client</span>
-        <input id="project-client" type="text" placeholder="Client">
-      </label>
-      <label class="inline-field inline-field-stage">
-        <span class="inline-label">Stage</span>
-        <select id="project-fel-stage"></select>
-      </label>
-      <label class="inline-field inline-field-lead">
-        <span class="inline-label">Lead</span>
-        <select id="discipline-lead-select"></select>
-      </label>
-    </div>
-    <div class="compact-row">
-      <label class="inline-field inline-field-filter">
-        <span class="inline-label">Discipline</span>
-        <select id="filter-discipline">
-          <option value="">All</option>
-        </select>
-      </label>
-      <label class="inline-field inline-field-filter">
-        <span class="inline-label">Deliverable</span>
-        <select id="filter-deliverable">
-          <option value="">All</option>
-        </select>
-      </label>
-      <label class="inline-field inline-field-filter-sm">
-        <span class="inline-label">Include</span>
-        <select id="filter-include">
-          <option value="">All</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </select>
-      </label>
-      <label class="inline-field inline-field-filter-sm">
-        <span class="inline-label">Status</span>
-        <select id="filter-status">
-          <option value="">All</option>
-        </select>
-      </label>
-    </div>
-    <div class="compact-row compact-actions">
-      <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
-      <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
-      <button type="button" id="btn-save" class="btn btn-compact">Save</button>
-      <button type="button" id="btn-export" class="btn btn-compact">Export Included to CSV</button>
-      <button type="button" id="btn-reset" class="btn btn-secondary btn-compact">Reset</button>
-      <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
-    </div>
-  </section>
-
-  <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
-
-  <section class="cards" aria-label="Schedule summary">
-    <div class="card">
-      <div class="card-label">Included Activities</div>
-      <div class="card-kpi" id="kpi-activities">0</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Included Hours</div>
-      <div class="card-kpi" id="kpi-hours">0</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Disciplines Included</div>
-      <div class="card-kpi" id="kpi-disciplines">0</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Lead Review / Hold</div>
-      <div class="card-kpi" id="kpi-review">0</div>
-    </div>
-  </section>
-
-  <section class="panel">
-    <div class="panel-head">
-      <div>
-        <h2>Activity Builder</h2>
-        <p class="hint">Checkbox controls Include. Activity ID shows without project prefix; export adds Project ID prefix. Final Name/Duration/Hours use custom override when filled.</p>
+  <div class="app-shell">
+    <section class="compact-toolbar" aria-label="Project setup, filters, and actions">
+      <div class="compact-row">
+        <label class="inline-field inline-field-project">
+          <span class="inline-label">Project</span>
+          <select id="project-select"></select>
+        </label>
+        <label class="inline-field inline-field-id">
+          <span class="inline-label">ID</span>
+          <select id="project-id-select"></select>
+        </label>
+        <label class="inline-field inline-field-client">
+          <span class="inline-label">Client</span>
+          <input id="project-client" type="text" placeholder="Client">
+        </label>
+        <label class="inline-field inline-field-stage">
+          <span class="inline-label">Stage</span>
+          <select id="project-fel-stage"></select>
+        </label>
+        <label class="inline-field inline-field-pm">
+          <span class="inline-label">PM</span>
+          <select id="pm-select"></select>
+        </label>
       </div>
-      <p class="hint" id="visible-count"></p>
-    </div>
-    <div class="table-wrap">
-      <table id="schedule-table">
-        <thead>
-          <tr>
-            <th class="col-select">
-              <input type="checkbox" id="select-all" aria-label="Select all visible rows">
-            </th>
-            <th class="col-include">Include</th>
-            <th>Activity ID</th>
-            <th>Discipline</th>
-            <th>Deliverable</th>
-            <th>Type</th>
-            <th>Base Activity Name</th>
-            <th>Custom Activity Name</th>
-            <th>Final Activity Name</th>
-            <th class="col-num">Base Dur</th>
-            <th class="col-num">Custom Dur</th>
-            <th class="col-num">Final Dur</th>
-            <th class="col-num">Base Hrs</th>
-            <th class="col-num">Custom Hrs</th>
-            <th class="col-num">Final Hrs</th>
-            <th>Activity Owner</th>
-            <th>Status</th>
-            <th>Lead Notes</th>
-          </tr>
-        </thead>
-        <tbody id="activities-body"></tbody>
-      </table>
-    </div>
-  </section>
+      <div class="compact-row compact-row-actions">
+        <label class="inline-field inline-field-filter">
+          <span class="inline-label">Discipline</span>
+          <select id="filter-discipline"><option value="">All</option></select>
+        </label>
+        <label class="inline-field inline-field-filter">
+          <span class="inline-label">Deliverable</span>
+          <select id="filter-deliverable"><option value="">All</option></select>
+        </label>
+        <label class="inline-field inline-field-filter-sm">
+          <span class="inline-label">Action</span>
+          <select id="filter-action"><option value="">All</option></select>
+        </label>
+        <label class="inline-field inline-field-filter-sm">
+          <span class="inline-label">Include</span>
+          <select id="filter-include">
+            <option value="">All</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <label class="inline-field inline-field-filter-sm">
+          <span class="inline-label">Status</span>
+          <select id="filter-status"><option value="">All</option></select>
+        </label>
+        <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
+        <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
+        <button type="button" id="btn-save" class="btn btn-compact">Save</button>
+        <button type="button" id="btn-export" class="btn btn-compact">Export CSV</button>
+        <button type="button" id="btn-reset" class="btn btn-secondary btn-compact">Reset</button>
+        <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
+      </div>
+    </section>
+
+    <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+
+    <section class="cards" aria-label="Schedule summary">
+      <div class="card">
+        <div class="card-label">Included Activities</div>
+        <div class="card-kpi" id="kpi-activities">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Included Hours</div>
+        <div class="card-kpi" id="kpi-hours">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Disciplines Included</div>
+        <div class="card-kpi" id="kpi-disciplines">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Lead Review / Hold</div>
+        <div class="card-kpi" id="kpi-review">0</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Activity Builder</h2>
+          <p class="hint">Final Activity Name = Action + Deliverable. Summary and export respect active filters.</p>
+        </div>
+        <p class="hint" id="visible-count"></p>
+      </div>
+      <div class="table-wrap">
+        <table id="schedule-table">
+          <colgroup id="schedule-cols"></colgroup>
+          <thead>
+            <tr>
+              <th class="col-select" data-col="select">
+                <input type="checkbox" id="select-all" aria-label="Select all visible rows">
+              </th>
+              <th class="col-include" data-col="include"><span class="th-label">Include</span></th>
+              <th data-col="activityId"><span class="th-label">Activity ID</span></th>
+              <th data-col="discipline"><span class="th-label">Discipline</span></th>
+              <th data-col="deliverable"><span class="th-label">Deliverable</span></th>
+              <th data-col="action"><span class="th-label">Action</span></th>
+              <th data-col="baseName"><span class="th-label">Base Activity Name</span></th>
+              <th data-col="finalName"><span class="th-label">Final Activity Name</span></th>
+              <th class="col-num" data-col="baseDur"><span class="th-label">Base Dur</span></th>
+              <th class="col-num" data-col="customDur"><span class="th-label">Custom Dur</span></th>
+              <th class="col-num" data-col="baseHrs"><span class="th-label">Base Hrs</span></th>
+              <th class="col-num" data-col="customHrs"><span class="th-label">Custom Hrs</span></th>
+              <th data-col="owner"><span class="th-label">Activity Owner</span></th>
+              <th data-col="status"><span class="th-label">Status</span></th>
+              <th data-col="notes"><span class="th-label">Notes</span></th>
+            </tr>
+          </thead>
+          <tbody id="activities-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
 
   <div id="manage-lists-modal" class="modal" hidden aria-hidden="true">
     <div class="modal-backdrop" data-action="close-modal"></div>
@@ -142,10 +138,11 @@
       </div>
       <div class="modal-tabs" role="tablist">
         <button type="button" class="modal-tab active" data-tab="projects" role="tab" aria-selected="true">Projects</button>
+        <button type="button" class="modal-tab" data-tab="projectIds" role="tab" aria-selected="false">Project IDs</button>
         <button type="button" class="modal-tab" data-tab="disciplines" role="tab" aria-selected="false">Disciplines</button>
         <button type="button" class="modal-tab" data-tab="deliverables" role="tab" aria-selected="false">Deliverables</button>
-        <button type="button" class="modal-tab" data-tab="disciplineLeads" role="tab" aria-selected="false">Discipline Leads</button>
-        <button type="button" class="modal-tab" data-tab="activityOwners" role="tab" aria-selected="false">Activity Owners</button>
+        <button type="button" class="modal-tab" data-tab="actions" role="tab" aria-selected="false">Actions</button>
+        <button type="button" class="modal-tab" data-tab="pms" role="tab" aria-selected="false">PMs</button>
       </div>
       <div class="modal-body">
         <div id="tab-panel-projects" class="tab-panel active" role="tabpanel">
@@ -153,6 +150,12 @@
             <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="projects">Add Project</button>
           </div>
           <ul id="list-editor-projects" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-projectIds" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="projectIds">Add Project ID</button>
+          </div>
+          <ul id="list-editor-projectIds" class="list-editor"></ul>
         </div>
         <div id="tab-panel-disciplines" class="tab-panel" role="tabpanel" hidden>
           <div class="list-editor-toolbar">
@@ -166,17 +169,17 @@
           </div>
           <ul id="list-editor-deliverables" class="list-editor"></ul>
         </div>
-        <div id="tab-panel-disciplineLeads" class="tab-panel" role="tabpanel" hidden>
+        <div id="tab-panel-actions" class="tab-panel" role="tabpanel" hidden>
           <div class="list-editor-toolbar">
-            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="disciplineLeads">Add Discipline Lead</button>
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="actions">Add Action</button>
           </div>
-          <ul id="list-editor-disciplineLeads" class="list-editor"></ul>
+          <ul id="list-editor-actions" class="list-editor"></ul>
         </div>
-        <div id="tab-panel-activityOwners" class="tab-panel" role="tabpanel" hidden>
+        <div id="tab-panel-pms" class="tab-panel" role="tabpanel" hidden>
           <div class="list-editor-toolbar">
-            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="activityOwners">Add Activity Owner</button>
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="pms">Add PM</button>
           </div>
-          <ul id="list-editor-activityOwners" class="list-editor"></ul>
+          <ul id="list-editor-pms" class="list-editor"></ul>
         </div>
       </div>
       <div class="modal-footer">
