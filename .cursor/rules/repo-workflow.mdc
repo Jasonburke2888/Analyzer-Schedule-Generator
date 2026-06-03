@@ -1,0 +1,38 @@
+---
+description: Edit, test, commit, and push workflow for this repo
+alwaysApply: true
+---
+
+# Analyzer Schedule Generator — agent workflow
+
+**Repo:** `/Users/jasonburke/Documents/GitHub/Analyzer-Schedule-Generator`  
+**Remote:** `https://github.com/Jasonburke2888/Analyzer-Schedule-Generator.git`  
+**Branch:** `main`  
+**Pages:** `https://jasonburke2888.github.io/Analyzer-Schedule-Generator/`
+
+## Before any work
+
+1. Confirm repo path, remote, and branch `main`.
+2. Run `git fetch origin` and `git status -sb`.
+3. Verify push works: `git push origin main` (or dry-run). If push fails, stop and apply the single fix below before coding.
+
+## Every update
+
+1. Make the requested change (minimal diff).
+2. Test locally: `node --check js/app.js` and `python3 -m http.server 8091` in repo root.
+3. Commit on `main` with a clear message.
+4. `git push origin main`
+5. Confirm Pages reflects the change (fetch live URL or check Actions deploy).
+
+## Push failure — one fix
+
+Load your GitHub SSH key and use SSH remote (key must be added to your GitHub account):
+
+```bash
+ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+cd ~/Documents/GitHub/Analyzer-Schedule-Generator
+git remote set-url origin git@github.com:Jasonburke2888/Analyzer-Schedule-Generator.git
+git push origin main
+```
+
+Do not ask the user to run git commands unless push still fails after this.

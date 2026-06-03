@@ -35,6 +35,9 @@
           <span class="inline-label">PM</span>
           <select id="pm-select"></select>
         </label>
+        <button type="button" id="btn-project-new" class="btn btn-secondary btn-compact" title="New project">New</button>
+        <button type="button" id="btn-project-clone" class="btn btn-secondary btn-compact" title="Clone current project">Clone</button>
+        <button type="button" id="btn-project-delete" class="btn btn-danger btn-compact" title="Delete current project">Del Proj</button>
       </div>
       <div class="compact-row compact-row-actions">
         <label class="inline-field inline-field-filter">
@@ -146,9 +149,12 @@
       </div>
       <div class="modal-body">
         <div id="tab-panel-projects" class="tab-panel active" role="tabpanel">
-          <div class="list-editor-toolbar">
-            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="projects">Add Project</button>
+          <div class="list-editor-toolbar project-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="project-new">New Project</button>
+            <button type="button" class="btn btn-secondary btn-small" data-action="project-clone">Clone Project</button>
+            <button type="button" class="btn btn-danger btn-small" data-action="project-delete">Delete Project</button>
           </div>
+          <p class="hint">Switch projects from the Project dropdown. Each project stores its own activities and setup.</p>
           <ul id="list-editor-projects" class="list-editor"></ul>
         </div>
         <div id="tab-panel-projectIds" class="tab-panel" role="tabpanel" hidden>

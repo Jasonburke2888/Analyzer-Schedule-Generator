@@ -19,7 +19,7 @@ Open [http://localhost:8080](http://localhost:8080)
 - **Action** dropdown (was Type) + Action filter; Final Activity Name = `Action - Deliverable` (read-only)
 - **Filtered KPIs** and **export** respect active filters (included + visible only)
 - **Resizable columns** with widths saved to `localStorage`
-- **Dense grid** — shorter rows, sticky headers, panel fills viewport height
+- **Multi-project:** New / Clone / Delete project (toolbar + Manage Lists → Projects); each project keeps its own activities and setup
 
 ## Manage Lists tabs
 

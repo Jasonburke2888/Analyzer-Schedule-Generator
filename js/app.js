@@ -89,6 +89,8 @@
     felStage: 'FEL-3',
     pm: 'Unassigned',
   };
+  let projectsData = {};
+  let currentProjectName = '';
   let columnWidths = {};
   let activeManageTab = 'projects';
   let resizeState = null;
@@ -317,6 +319,124 @@
   // Persistence
   // ---------------------------------------------------------------------------
 
+  function persistCurrentProject() {
+    const name = (projectSettings.name || currentProjectName || '').trim();
+    if (!name) return;
+    currentProjectName = name;
+    projectSettings.name = name;
+    projectsData[name] = {
+      activities: activities,
+      settings: {
+        name: name,
+        id: projectSettings.id || '',
+        client: projectSettings.client || '',
+        felStage: projectSettings.felStage || 'FEL-3',
+        pm: projectSettings.pm || 'Unassigned',
+      },
+    };
+  }
+
+  function applyProjectSettings(settings) {
+    projectSettings = {
+      name: settings.name || currentProjectName || '',
+      id: settings.id || '',
+      client: settings.client || '',
+      felStage: settings.felStage || 'FEL-3',
+      pm: settings.pm || 'Unassigned',
+    };
+  }
+
+  function switchToProject(name) {
+    if (!name) return;
+    persistCurrentProject();
+    currentProjectName = name;
+    if (!lists.projects.includes(name)) addToList('projects', name);
+    const bundle = projectsData[name];
+    if (bundle) {
+      activities = bundle.activities.map(rehydrateActivity);
+      applyProjectSettings(bundle.settings);
+    } else {
+      activities = [];
+      applyProjectSettings({
+        name: name,
+        id: lists.projectIds[0] || '',
+        client: '',
+        felStage: 'FEL-3',
+        pm: 'Unassigned',
+      });
+      projectsData[name] = {
+        activities: activities,
+        settings: Object.assign({}, projectSettings),
+      };
+    }
+    activities.forEach(function (a) {
+      if (a._id >= nextInternalId) nextInternalId = a._id + 1;
+    });
+    mergeListsFromActivities(activities);
+    syncProjectSetupUI();
+    renderTable();
+    saveToStorage();
+  }
+
+  function handleNewProject() {
+    const name = promptNewListItem('New project name:');
+    if (!name) return;
+    if (lists.projects.includes(name)) {
+      showStatus('Project "' + name + '" already exists.', true);
+      return;
+    }
+    persistCurrentProject();
+    addToList('projects', name);
+    projectsData[name] = {
+      activities: [],
+      settings: {
+        name: name,
+        id: lists.projectIds[0] || '',
+        client: '',
+        felStage: 'FEL-3',
+        pm: 'Unassigned',
+      },
+    };
+    switchToProject(name);
+    showStatus('Created project "' + name + '".');
+  }
+
+  function handleCloneProject() {
+    const source = projectSettings.name || currentProjectName;
+    if (!source) { showStatus('No project selected to clone.', true); return; }
+    const name = promptNewListItem('Clone "' + source + '" as:');
+    if (!name || name === source) return;
+    if (lists.projects.includes(name)) {
+      showStatus('Project "' + name + '" already exists.', true);
+      return;
+    }
+    persistCurrentProject();
+    addToList('projects', name);
+    projectsData[name] = {
+      activities: JSON.parse(JSON.stringify(activities)),
+      settings: Object.assign({}, projectSettings, { name: name }),
+    };
+    switchToProject(name);
+    showStatus('Cloned "' + source + '" to "' + name + '".');
+  }
+
+  function handleDeleteProject() {
+    const name = projectSettings.name || currentProjectName;
+    if (!name) return;
+    if (lists.projects.length <= 1) {
+      showStatus('At least one project must remain.', true);
+      return;
+    }
+    if (!window.confirm('Delete project "' + name + '" and all its saved activities?')) return;
+    delete projectsData[name];
+    const idx = lists.projects.indexOf(name);
+    if (idx !== -1) lists.projects.splice(idx, 1);
+    const next = lists.projects[0] || DEFAULT_PROJECTS[0];
+    currentProjectName = '';
+    switchToProject(next);
+    showStatus('Deleted project "' + name + '".');
+  }
+
   function ensureDefaultLists() {
     if (!lists.projects.length) lists.projects = DEFAULT_PROJECTS.slice();
     if (!lists.projectIds.length) lists.projectIds = DEFAULT_PROJECT_IDS.slice();
@@ -382,14 +502,32 @@
       if (!raw) raw = localStorage.getItem(STORAGE_KEY_LEGACY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed.activities)) return null;
       nextInternalId = parsed.nextInternalId || 1;
       migrateParsedStorage(parsed);
+
+      if (parsed.projectsData && typeof parsed.projectsData === 'object') {
+        projectsData = parsed.projectsData;
+        currentProjectName = parsed.currentProjectName || projectSettings.name || lists.projects[0] || '';
+        const bundle = projectsData[currentProjectName];
+        if (bundle && Array.isArray(bundle.activities)) {
+          ensureDefaultLists();
+          applyProjectSettings(bundle.settings || { name: currentProjectName });
+          const rows = bundle.activities.map(rehydrateActivity);
+          rows.forEach(function (a) { a.activityId = stripActivityIdPrefix(a.activityId); });
+          return rows;
+        }
+      }
+
+      if (!Array.isArray(parsed.activities)) return null;
       ensureDefaultLists();
+      const legacyName = projectSettings.name || lists.projects[0] || DEFAULT_PROJECTS[0];
+      currentProjectName = legacyName;
       const rows = parsed.activities.map(rehydrateActivity);
-      rows.forEach(function (a) {
-        a.activityId = stripActivityIdPrefix(a.activityId);
-      });
+      rows.forEach(function (a) { a.activityId = stripActivityIdPrefix(a.activityId); });
+      projectsData[legacyName] = {
+        activities: rows,
+        settings: Object.assign({}, projectSettings, { name: legacyName }),
+      };
       return rows;
     } catch {
       return null;
@@ -397,11 +535,12 @@
   }
 
   function saveToStorage() {
+    persistCurrentProject();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       nextInternalId: nextInternalId,
-      activities: activities,
+      projectsData: projectsData,
+      currentProjectName: currentProjectName,
       lists: lists,
-      project: projectSettings,
       columnWidths: columnWidths,
       savedAt: new Date().toISOString(),
     }));
@@ -589,6 +728,12 @@
     if (listKey === 'projects' && projectSettings.name === oldName) {
       projectSettings.name = newName;
     }
+    if (listKey === 'projects' && projectsData[oldName]) {
+      projectsData[newName] = projectsData[oldName];
+      projectsData[newName].settings.name = newName;
+      delete projectsData[oldName];
+      if (currentProjectName === oldName) currentProjectName = newName;
+    }
     if (listKey === 'projectIds' && projectSettings.id === oldName) {
       projectSettings.id = newName;
     }
@@ -626,8 +771,12 @@
       return false;
     }
     lists[listKey].splice(idx, 1);
-    if (listKey === 'projects' && projectSettings.name === name) {
-      projectSettings.name = lists.projects[0] || '';
+    if (listKey === 'projects') {
+      delete projectsData[name];
+      if (projectSettings.name === name || currentProjectName === name) {
+        if (lists.projects.length) switchToProject(lists.projects[0]);
+      }
+      return true;
     }
     if (listKey === 'projectIds' && projectSettings.id === name) {
       projectSettings.id = lists.projectIds[0] || '';
@@ -794,13 +943,8 @@
   }
 
   function handleAddProjectFromSelect() {
-    const name = promptNewListItem('New project name:');
-    if (!name) { projectSelect.value = projectSettings.name || ''; return; }
-    addToList('projects', name);
-    projectSettings.name = name;
-    syncProjectSetupUI();
-    saveToStorage();
-    showStatus('Project "' + name + '" added.');
+    handleNewProject();
+    if (projectSelect && projectSettings.name) projectSelect.value = projectSettings.name;
   }
 
   function handleAddProjectIdFromSelect() {
@@ -1372,8 +1516,7 @@
       handleAddProjectFromSelect();
       return;
     }
-    projectSettings.name = projectSelect.value;
-    saveToStorage();
+    switchToProject(projectSelect.value);
   }
 
   function handleProjectSetupChange() {
@@ -1441,6 +1584,9 @@
     });
     document.getElementById('btn-reset').addEventListener('click', resetToTemplate);
     document.getElementById('btn-export').addEventListener('click', exportIncludedCsv);
+    document.getElementById('btn-project-new').addEventListener('click', handleNewProject);
+    document.getElementById('btn-project-clone').addEventListener('click', handleCloneProject);
+    document.getElementById('btn-project-delete').addEventListener('click', handleDeleteProject);
     document.getElementById('btn-manage-lists').addEventListener('click', openManageListsModal);
     selectAllCheckbox.addEventListener('change', handleSelectAll);
 
@@ -1454,6 +1600,9 @@
     manageModal.addEventListener('click', function (event) {
       const action = event.target.dataset.action;
       if (action === 'close-modal') closeManageListsModal();
+      if (action === 'project-new') handleNewProject();
+      if (action === 'project-clone') handleCloneProject();
+      if (action === 'project-delete') handleDeleteProject();
       if (action === 'add-list-item') handleAddListItem(event.target.dataset.list);
       if (action === 'rename-list-item') handleRenameListItem(event.target.dataset.list, event.target.dataset.name);
       if (action === 'delete-list-item') handleDeleteListItem(event.target.dataset.list, event.target.dataset.name);
@@ -1480,6 +1629,12 @@
       try {
         activities = await loadFromCsv();
         mergeListsFromActivities(activities);
+        currentProjectName = projectSettings.name || lists.projects[0];
+        projectSettings.name = currentProjectName;
+        projectsData[currentProjectName] = {
+          activities: activities,
+          settings: Object.assign({}, projectSettings),
+        };
         syncProjectSetupUI();
         renderTable();
         saveToStorage();

@@ -298,22 +298,34 @@ table {
 th,
 td {
   border-bottom: 1px solid #eef2f7;
-  padding: 2px 4px;
+  padding: 1px 3px;
   vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.15;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
 }
 
 th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
   background: #eef5fb;
   text-align: left;
-  font-size: 10px;
+  font-size: 9px;
   color: #344054;
   white-space: nowrap;
   user-select: none;
+  box-shadow: 0 1px 0 var(--line);
+}
+
+tbody tr {
+  height: 20px;
 }
 
 .th-label {
@@ -373,10 +385,11 @@ td input[type="number"],
 td select {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 2px 4px;
-  min-height: 22px;
-  font-size: 11px;
+  border-radius: 3px;
+  padding: 1px 3px;
+  min-height: 18px;
+  font-size: 10px;
+  line-height: 1.15;
   background: #fff;
   color: var(--ink);
 }
@@ -389,22 +402,30 @@ td.col-owner select {
 }
 
 td textarea {
-  min-height: 22px;
-  padding: 2px 4px;
-  font-size: 11px;
-  line-height: 1.25;
+  min-height: 18px;
+  max-height: 32px;
+  padding: 1px 3px;
+  font-size: 10px;
+  line-height: 1.15;
 }
 
 td input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .computed {
   font-weight: 600;
   color: #344054;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 10px;
+}
+
+.project-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 /* Manage Lists modal */
