@@ -8,12 +8,13 @@
  * 2. EDIT — Event delegation on #schedule-table; no full re-render on keypress.
  *    Selects (discipline, deliverable, owner) sync on change; text fields on blur.
  * 3. FILTER — CSS row-hidden only; focus preserved.
- * 4. STRUCTURAL — add/delete/reset call renderTable().
- * 5. SAVE — activities, lists, project metadata → localStorage.
+ * 4. STRUCTURAL — add/delete/duplicate/reset call renderTable().
+ * 5. SAVE — activities, lists, project metadata, gridZoom → localStorage.
  * 6. LISTS — Manage Lists modal (tabs) for projects/disciplines/deliverables;
  *    inline "+ Add ..." in grid dropdowns; refreshListDropdowns() updates selects
  *    without rebuilding the table.
  * 7. UNDO — Snapshot stack (50 levels) for grid edits; Cmd+Z / Cmd+Shift+Z.
+ * 8. ZOOM — Grid-only zoom (100–175%) via CSS --grid-zoom on Activity Builder panel.
  */
 
 (function () {
