@@ -8,8 +8,7 @@
 </head>
 <body>
   <header class="app-header">
-    <h1>FEL-3 Analyzer Schedule Template Builder</h1>
-    <p>Customize activities, include/exclude scope, override durations/hours, collect notes, then export CSV for P6 prep.</p>
+    <h1>FEL-3 Analyzer Schedule Builder</h1>
   </header>
 
   <div class="app-shell">
@@ -94,12 +93,9 @@
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <h2>Activity Builder</h2>
-          <p class="hint">Final Activity Name = Action + Deliverable. Summary and export respect active filters.</p>
-        </div>
+    <section class="panel panel-activity-builder">
+      <div class="panel-head panel-head-compact">
+        <h2>Activity Builder</h2>
         <p class="hint" id="visible-count"></p>
       </div>
       <div class="table-wrap">
@@ -110,9 +106,9 @@
               <th class="col-select" data-col="select">
                 <input type="checkbox" id="select-all" aria-label="Select all visible rows">
               </th>
-              <th class="col-include" data-col="include"><span class="th-label">Include</span></th>
-              <th data-col="activityId"><span class="th-label">Activity ID</span></th>
-              <th data-col="discipline"><span class="th-label">Discipline</span></th>
+              <th class="col-include col-sticky-h" data-col="include"><span class="th-label">Include</span></th>
+              <th class="col-sticky-h" data-col="activityId"><span class="th-label">Activity ID</span></th>
+              <th class="col-sticky-h" data-col="discipline"><span class="th-label">Discipline</span></th>
               <th data-col="deliverable"><span class="th-label">Deliverable</span></th>
               <th data-col="action"><span class="th-label">Action</span></th>
               <th data-col="baseName"><span class="th-label">Base Activity Name</span></th>
@@ -121,7 +117,7 @@
               <th class="col-num" data-col="customDur"><span class="th-label">Custom Dur</span></th>
               <th class="col-num" data-col="baseHrs"><span class="th-label">Base Hrs</span></th>
               <th class="col-num" data-col="customHrs"><span class="th-label">Custom Hrs</span></th>
-              <th data-col="owner"><span class="th-label">Activity Owner</span></th>
+              <th data-col="owner"><span class="th-label">Discipline Lead</span></th>
               <th data-col="status"><span class="th-label">Status</span></th>
               <th data-col="notes"><span class="th-label">Notes</span></th>
             </tr>

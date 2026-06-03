@@ -34,19 +34,14 @@ body {
 .app-header {
   background: linear-gradient(135deg, var(--blue), #123550);
   color: #fff;
-  padding: 10px 16px;
+  padding: 6px 12px;
   flex-shrink: 0;
 }
 
 .app-header h1 {
-  margin: 0 0 2px;
-  font-size: 18px;
-}
-
-.app-header p {
   margin: 0;
-  opacity: 0.9;
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .app-shell {
@@ -59,12 +54,88 @@ body {
 
 /* Compact toolbar (Project Setup + Filters + Actions) */
 .compact-toolbar {
-  margin: 4px 10px 2px;
+  margin: 2px 8px 2px;
+  padding: 3px 5px;
+  flex-shrink: 0;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 4px 6px;
+}
+
+.status-message {
+  margin: 0 8px 1px;
+  min-height: 0.75rem;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--green);
   flex-shrink: 0;
+}
+
+.cards {
+  margin: 0 8px 2px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 0;
+}
+
+.card-label {
+  color: var(--muted);
+  font-size: 9px;
+  margin: 0;
+}
+
+.card-kpi {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.1;
+  color: var(--blue);
+}
+
+.panel,
+.panel-activity-builder {
+  margin: 0 8px 6px;
+  flex: 1 1 auto;
+  min-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panel-head-compact {
+  padding: 3px 8px;
+  min-height: 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-head-compact h2 {
+  font-size: 12px;
+  margin: 0;
+}
+
+.panel-head-compact .hint {
+  font-size: 10px;
+  margin: 0;
 }
 
 .compact-row {
@@ -210,9 +281,10 @@ select option.add-option {
 }
 
 .status-message {
-  margin: 0 10px 2px;
-  min-height: 0.9rem;
-  font-size: 11px;
+  margin: 0 8px 1px;
+  min-height: 0.75rem;
+  font-size: 10px;
+  line-height: 1.2;
   color: var(--green);
   flex-shrink: 0;
 }
@@ -221,46 +293,7 @@ select option.add-option {
   color: var(--red);
 }
 
-.cards {
-  margin: 0 10px 4px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  padding: 5px 8px;
-  border-radius: 6px;
-}
-
-.card-label {
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.card-kpi {
-  font-size: 18px;
-  font-weight: 700;
-  margin-top: 0;
-  color: var(--blue);
-}
-
-.panel {
-  margin: 0 10px 8px;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.panel-head {
+.panel-head,
   padding: 6px 10px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--line);
@@ -290,9 +323,22 @@ select option.add-option {
 }
 
 table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   table-layout: fixed;
+}
+
+th.col-sticky-h,
+td.col-sticky-h {
+  position: sticky;
+  z-index: 2;
+  background: #fff;
+}
+
+thead th.col-sticky-h {
+  z-index: 7;
+  background: #eef5fb;
 }
 
 th,
@@ -357,13 +403,29 @@ body.col-resizing {
   background: #f8fafc;
 }
 
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+tbody tr:nth-child(even) td.col-sticky-h {
+  background: #f3f6f9;
+}
+
 tbody tr:hover {
-  background: #fafcff;
+  background: #eef6ff;
+}
+
+tbody tr:hover td.col-sticky-h {
+  background: #e5f0fa;
 }
 
 tbody tr.excluded {
-  opacity: 0.48;
-  background: #fafafa;
+  opacity: 0.55;
+  background: #f4f4f4;
+}
+
+tbody tr.excluded:nth-child(even) td.col-sticky-h {
+  background: #ececec;
 }
 
 tbody tr.row-hidden {
@@ -397,7 +459,7 @@ td select {
 td.col-discipline select,
 td.col-deliverable select,
 td.col-action select,
-td.col-owner select {
+td.col-discipline-lead select {
   min-width: 0;
 }
 

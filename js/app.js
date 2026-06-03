@@ -1,5 +1,5 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.3)
+ * FEL-3 Analyzer Schedule Template Builder (v2.4)
  *
  * RENDER / EDIT / SAVE FLOW
  * -------------------------
@@ -50,22 +50,28 @@
     'Structural', 'PMAC', 'Project Controls', 'Procurement', 'Construction', 'Other',
   ];
   const DEFAULT_COLUMN_WIDTHS = {
-    select: 36,
-    include: 55,
-    activityId: 75,
-    discipline: 150,
-    deliverable: 160,
-    action: 90,
-    baseName: 180,
-    finalName: 300,
-    baseDur: 60,
-    customDur: 70,
-    baseHrs: 60,
-    customHrs: 70,
-    owner: 120,
-    status: 90,
-    notes: 250,
+    select: 32,
+    include: 45,
+    activityId: 70,
+    discipline: 140,
+    deliverable: 150,
+    action: 85,
+    baseName: 240,
+    finalName: 220,
+    baseDur: 55,
+    customDur: 65,
+    baseHrs: 55,
+    customHrs: 65,
+    owner: 110,
+    status: 85,
+    notes: 200,
   };
+  const COLUMN_ORDER = [
+    'select', 'include', 'activityId', 'discipline', 'deliverable', 'action',
+    'baseName', 'finalName', 'baseDur', 'customDur', 'baseHrs', 'customHrs',
+    'owner', 'status', 'notes',
+  ];
+  const STICKY_COLUMNS = ['include', 'activityId', 'discipline'];
   const FEL_STAGES = ['FEL-1', 'FEL-2', 'FEL-3', 'FEL-4', 'Construction'];
   const STATUS_OPTIONS = [
     'Not Started', 'In Progress', 'Lead Review', 'Complete', 'Hold', 'Delete / Exclude',
@@ -262,9 +268,15 @@
       budgetedHours: parseNumber(record.budgeted_hours || record.base_hours || record.hours),
       customHours: parseNumber(record.custom_hours),
       owner: record.owner || record.activity_owner || record.owner_lead || '',
-      status: record.status || record.lead_status || 'Not Started',
+      status: normalizeTemplateStatus(record.status || record.lead_status || ''),
       leadNotes: record.lead_notes || record.leadnotes || '',
     });
+  }
+
+  function normalizeTemplateStatus(value) {
+    const v = (value || '').trim();
+    if (!v || v === 'Complete') return 'Not Started';
+    return v;
   }
 
   function createActivity(overrides) {
@@ -696,11 +708,11 @@
     tbody.querySelectorAll('select[data-field="owner"]').forEach(function (sel) {
       const activity = getActivityByRow(sel.closest('tr'));
       if (activity) {
-        fillListSelect(sel, getOwnerOptions(activity.owner), {
+        fillListSelect(sel, getPmOptions(activity.owner), {
           blankLabel: '—',
           currentValue: activity.owner,
-          addValue: ADD_OWNER,
-          addLabel: '+ Add Activity Owner...',
+          addValue: ADD_PM,
+          addLabel: '+ Add Discipline Lead...',
         });
       }
     });
@@ -931,15 +943,15 @@
     showStatus('Deliverable "' + name + '" added.');
   }
 
-  function handleAddOwnerFromSelect(selectEl, activity) {
-    const name = promptNewListItem('New activity owner name:');
+  function handleAddPmToRowFromSelect(selectEl, activity) {
+    const name = promptNewListItem('New discipline lead name:');
     if (!name) { selectEl.value = activity.owner || ''; return; }
-    addToList('activityOwners', name);
+    addToList('pms', name);
     activity.owner = name;
     refreshListDropdowns();
     saveToStorage();
     updateSummary();
-    showStatus('Activity owner "' + name + '" added.');
+    showStatus('Discipline lead "' + name + '" added.');
   }
 
   function handleAddProjectFromSelect() {
@@ -992,14 +1004,30 @@
   function applyColumnWidths() {
     if (!colgroup) return;
     colgroup.innerHTML = '';
-    table.querySelectorAll('thead th[data-col]').forEach(function (th) {
-      const key = th.dataset.col;
+    COLUMN_ORDER.forEach(function (key) {
+      const th = table.querySelector('thead th[data-col="' + key + '"]');
+      if (!th) return;
       const w = getColumnWidth(key);
       const col = document.createElement('col');
       col.style.width = w + 'px';
       col.dataset.col = key;
       colgroup.appendChild(col);
       th.style.width = w + 'px';
+    });
+    applyStickyColumnOffsets();
+  }
+
+  function applyStickyColumnOffsets() {
+    let left = 0;
+    COLUMN_ORDER.forEach(function (key) {
+      const w = getColumnWidth(key);
+      if (STICKY_COLUMNS.indexOf(key) >= 0) {
+        table.querySelectorAll('thead th[data-col="' + key + '"], tbody td[data-col="' + key + '"]').forEach(function (el) {
+          el.classList.add('col-sticky-h');
+          el.style.left = left + 'px';
+        });
+      }
+      left += w;
     });
   }
 
@@ -1085,6 +1113,7 @@
 
   function buildCheckboxCell(field, checked, label) {
     const td = document.createElement('td');
+    td.dataset.col = field === 'include' ? 'include' : 'select';
     td.className = field === 'include' ? 'col-include' : 'col-select';
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -1097,6 +1126,8 @@
 
   function buildTextCell(field, value) {
     const td = document.createElement('td');
+    if (field === 'activityId') td.dataset.col = 'activityId';
+    if (field === 'activityName') td.dataset.col = 'baseName';
     const input = document.createElement('input');
     input.type = 'text';
     input.dataset.field = field;
@@ -1120,6 +1151,7 @@
 
   function buildListSelectCell(field, value) {
     const td = document.createElement('td');
+    td.dataset.col = field;
     if (field === 'discipline') td.className = 'col-discipline';
     if (field === 'deliverable') td.className = 'col-deliverable';
     const select = document.createElement('select');
@@ -1141,12 +1173,13 @@
 
   function buildOwnerCell(value) {
     const td = document.createElement('td');
-    td.className = 'col-owner';
+    td.dataset.col = 'owner';
+    td.className = 'col-discipline-lead';
     const select = document.createElement('select');
     select.dataset.field = 'owner';
-    fillListSelect(select, getOwnerOptions(value), {
+    fillListSelect(select, getPmOptions(value), {
       blankLabel: '—', currentValue: value || '',
-      addValue: ADD_OWNER, addLabel: '+ Add Activity Owner...',
+      addValue: ADD_PM, addLabel: '+ Add Discipline Lead...',
     });
     td.appendChild(select);
     return td;
@@ -1186,8 +1219,14 @@
 
   function buildStatusCell(value) {
     const td = document.createElement('td');
+    td.dataset.col = 'status';
     const select = document.createElement('select');
     select.dataset.field = 'status';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '—';
+    if (!value) blank.selected = true;
+    select.appendChild(blank);
     STATUS_OPTIONS.forEach(function (option) {
       const opt = document.createElement('option');
       opt.value = option;
@@ -1257,8 +1296,8 @@
       handleAddActionFromSelect(control, activity);
       return;
     }
-    if (control.dataset.field === 'owner' && control.value === ADD_OWNER) {
-      handleAddOwnerFromSelect(control, activity);
+    if (control.dataset.field === 'owner' && control.value === ADD_PM) {
+      handleAddPmToRowFromSelect(control, activity);
       return;
     }
 
@@ -1464,7 +1503,7 @@
     const headers = [
       'Project Name', 'Project ID', 'Client', 'FEL Stage', 'PM',
       'Activity ID', 'Activity Name', 'Discipline', 'Deliverable', 'Action',
-      'Original Duration', 'Budgeted Hours', 'Activity Owner', 'Lead Status', 'Lead Notes',
+      'Original Duration', 'Budgeted Hours', 'Discipline Lead', 'Lead Status', 'Lead Notes',
     ];
     const lines = [headers.join(',')];
     toExport.forEach(function (a) {
