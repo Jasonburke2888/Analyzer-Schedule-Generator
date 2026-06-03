@@ -1,5 +1,5 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.5)
+ * FEL-3 Analyzer Schedule Template Builder (v2.6)
  *
  * RENDER / EDIT / SAVE FLOW
  * -------------------------
@@ -13,6 +13,7 @@
  * 6. LISTS — Manage Lists modal (tabs) for projects/disciplines/deliverables;
  *    inline "+ Add ..." in grid dropdowns; refreshListDropdowns() updates selects
  *    without rebuilding the table.
+ * 7. UNDO — Snapshot stack (50 levels) for grid edits; Cmd+Z / Cmd+Shift+Z.
  */
 
 (function () {
@@ -49,12 +50,13 @@
     'Unassigned', 'Process', 'Mechanical', 'Electrical', 'Instrumentation', 'Civil',
     'Structural', 'PMAC', 'Project Controls', 'Procurement', 'Construction', 'Other',
   ];
+  const MAX_UNDO = 50;
+
   const DEFAULT_COLUMN_WIDTHS = {
     select: 32,
     include: 45,
     activityId: 70,
     discipline: 140,
-    deliverable: 150,
     action: 85,
     deliverable: 150,
     activityName: 240,
@@ -100,12 +102,20 @@
   let columnWidths = {};
   let activeManageTab = 'projects';
   let resizeState = null;
+  let undoStack = [];
+  let redoStack = [];
+  let isRestoringHistory = false;
 
   const tbody = document.getElementById('activities-body');
   const table = document.getElementById('schedule-table');
   const colgroup = document.getElementById('schedule-cols');
   const statusMessage = document.getElementById('status-message');
-  const visibleCountEl = document.getElementById('visible-count');
+  const summaryActivitiesEl = document.getElementById('summary-activities');
+  const summaryHoursEl = document.getElementById('summary-hours');
+  const summaryDisciplinesEl = document.getElementById('summary-disciplines');
+  const summaryHoldEl = document.getElementById('summary-hold');
+  const btnUndo = document.getElementById('btn-undo');
+  const btnRedo = document.getElementById('btn-redo');
   const projectSelect = document.getElementById('project-select');
   const projectIdSelect = document.getElementById('project-id-select');
   const projectClientInput = document.getElementById('project-client');
@@ -381,9 +391,64 @@
     };
   }
 
+  function clearUndoRedo() {
+    undoStack = [];
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function snapshotActivities() {
+    return JSON.parse(JSON.stringify(activities));
+  }
+
+  function pushUndoState() {
+    if (isRestoringHistory) return;
+    undoStack.push(snapshotActivities());
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function restoreActivitiesSnapshot(state) {
+    isRestoringHistory = true;
+    activities = state.map(rehydrateActivity);
+    activities.forEach(function (a) {
+      if (a._id >= nextInternalId) nextInternalId = a._id + 1;
+    });
+    renderTable();
+    saveToStorage();
+    isRestoringHistory = false;
+    updateUndoRedoButtons();
+    applyFilters();
+  }
+
+  function undo() {
+    if (!undoStack.length) return;
+    isRestoringHistory = true;
+    redoStack.push(snapshotActivities());
+    isRestoringHistory = false;
+    restoreActivitiesSnapshot(undoStack.pop());
+    showStatus('Undo.');
+  }
+
+  function redo() {
+    if (!redoStack.length) return;
+    isRestoringHistory = true;
+    undoStack.push(snapshotActivities());
+    isRestoringHistory = false;
+    restoreActivitiesSnapshot(redoStack.pop());
+    showStatus('Redo.');
+  }
+
+  function updateUndoRedoButtons() {
+    if (btnUndo) btnUndo.disabled = undoStack.length === 0;
+    if (btnRedo) btnRedo.disabled = redoStack.length === 0;
+  }
+
   function switchToProject(name) {
     if (!name) return;
     persistCurrentProject();
+    clearUndoRedo();
     currentProjectName = name;
     if (!lists.projects.includes(name)) addToList('projects', name);
     const bundle = projectsData[name];
@@ -601,8 +666,8 @@
     });
   }
 
-  function getPmOptions() {
-    return sortUnique(lists.pms.concat([projectSettings.pm]));
+  function getPmOptions(currentValue) {
+    return sortUnique(lists.pms.concat([projectSettings.pm, currentValue]));
   }
 
   function populatePmSelect() {
@@ -946,6 +1011,7 @@
   function handleAddDisciplineFromSelect(selectEl, activity) {
     const name = promptNewListItem('New discipline name:');
     if (!name) { selectEl.value = activity.discipline || ''; return; }
+    pushUndoState();
     addToList('disciplines', name);
     activity.discipline = name;
     refreshListDropdowns();
@@ -958,6 +1024,7 @@
   function handleAddDeliverableFromSelect(selectEl, activity) {
     const name = promptNewListItem('New deliverable name:');
     if (!name) { selectEl.value = activity.deliverable || ''; return; }
+    pushUndoState();
     addToList('deliverables', name);
     activity.deliverable = name;
     refreshListDropdowns();
@@ -970,6 +1037,7 @@
   function handleAddPmToRowFromSelect(selectEl, activity) {
     const name = promptNewListItem('New discipline lead name:');
     if (!name) { selectEl.value = activity.owner || ''; return; }
+    pushUndoState();
     addToList('pms', name);
     activity.owner = name;
     refreshListDropdowns();
@@ -1006,6 +1074,7 @@
   function handleAddActionFromSelect(selectEl, activity) {
     const name = promptNewListItem('New action name:');
     if (!name) { selectEl.value = activity.activityType || ''; return; }
+    pushUndoState();
     addToList('actions', name);
     activity.activityType = name;
     refreshListDropdowns();
@@ -1300,6 +1369,19 @@
     else activity[field] = control.value;
   }
 
+  function handleTableFocusIn(event) {
+    const control = event.target;
+    if (!control.dataset.field || control.type === 'checkbox' || control.tagName === 'SELECT') return;
+    if (control.dataset.undoSession) return;
+    pushUndoState();
+    control.dataset.undoSession = '1';
+  }
+
+  function handleTableFocusOut(event) {
+    const control = event.target;
+    if (control.dataset.field) delete control.dataset.undoSession;
+  }
+
   function handleTableChange(event) {
     const control = event.target;
     if (!control.dataset.field) return;
@@ -1324,6 +1406,7 @@
       return;
     }
 
+    pushUndoState();
     syncControlToActivity(control, activity);
     updateRowComputed(tr, activity);
     saveToStorage();
@@ -1383,14 +1466,11 @@
   }
 
   function applyFilters() {
-    let visible = 0;
     tbody.querySelectorAll('tr').forEach(function (tr) {
       const activity = getActivityByRow(tr);
       const show = rowMatchesFilters(activity);
       tr.classList.toggle('row-hidden', !show);
-      if (show) visible++;
     });
-    visibleCountEl.textContent = visible + ' visible of ' + activities.length + ' total';
     selectAllCheckbox.checked = false;
     updateSummary();
   }
@@ -1433,10 +1513,10 @@
       return a.include && (a.status === 'Lead Review' || a.status === 'Hold');
     }).length;
 
-    document.getElementById('kpi-activities').textContent = included.length.toLocaleString();
-    document.getElementById('kpi-hours').textContent = formatHours(includedHours);
-    document.getElementById('kpi-disciplines').textContent = String(disciplines.size);
-    document.getElementById('kpi-review').textContent = String(reviewHold);
+    if (summaryActivitiesEl) summaryActivitiesEl.textContent = included.length.toLocaleString();
+    if (summaryHoursEl) summaryHoursEl.textContent = formatHours(includedHours);
+    if (summaryDisciplinesEl) summaryDisciplinesEl.textContent = String(disciplines.size);
+    if (summaryHoldEl) summaryHoldEl.textContent = String(reviewHold);
   }
 
   // ---------------------------------------------------------------------------
@@ -1454,6 +1534,7 @@
   }
 
   function addActivity() {
+    pushUndoState();
     activities.unshift(createActivity({
       include: true,
       activityId: nextActivityId(),
@@ -1502,6 +1583,7 @@
     const ids = new Set(pendingDeleteIds);
     const count = pendingDeleteIds.length;
     closeDeletePasswordModal();
+    pushUndoState();
     activities = activities.filter(function (a) { return !ids.has(a._id); });
     renderTable();
     saveToStorage();
@@ -1565,6 +1647,7 @@
       'Reset activities to data/activities.csv? Activity edits will be lost. Project setup and custom lists are kept.'
     )) return;
     try {
+      pushUndoState();
       nextInternalId = 1;
       activities = await loadFromCsv();
       migrateAllActivityNaming();
@@ -1631,6 +1714,18 @@
     table.addEventListener('change', handleTableChange);
     table.addEventListener('blur', handleTableBlur, true);
     table.addEventListener('input', handleTableInput);
+    table.addEventListener('focusin', handleTableFocusIn);
+    table.addEventListener('focusout', handleTableFocusOut);
+
+    if (btnUndo) btnUndo.addEventListener('click', undo);
+    if (btnRedo) btnRedo.addEventListener('click', redo);
+
+    document.addEventListener('keydown', function (event) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return;
+      event.preventDefault();
+      if (event.shiftKey) redo();
+      else undo();
+    });
 
     document.getElementById('btn-add').addEventListener('click', addActivity);
     document.getElementById('btn-delete').addEventListener('click', deleteSelected);
@@ -1711,6 +1806,7 @@
         showStatus(err.message + ' See README.', true);
       }
     }
+    updateUndoRedoButtons();
   }
 
   init();
