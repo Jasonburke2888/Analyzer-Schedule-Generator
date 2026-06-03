@@ -35,19 +35,20 @@
           <select id="pm-select"></select>
         </label>
         <span class="toolbar-divider" aria-hidden="true"></span>
-        <button type="button" id="btn-project-new" class="btn btn-secondary btn-compact" title="New project">New Project</button>
-        <button type="button" id="btn-project-clone" class="btn btn-secondary btn-compact" title="Clone current project">Clone Project</button>
-        <button type="button" id="btn-project-delete" class="btn btn-danger btn-compact" title="Delete current project">Delete Project</button>
-        <span class="toolbar-divider" aria-hidden="true"></span>
+        <label class="inline-field inline-field-zoom">
+          <span class="inline-label">Zoom</span>
+          <select id="grid-zoom-select" aria-label="Activity Builder zoom">
+            <option value="100">100%</option>
+            <option value="125" selected>125%</option>
+            <option value="150">150%</option>
+            <option value="175">175%</option>
+          </select>
+        </label>
         <button type="button" id="btn-undo" class="btn btn-secondary btn-compact" title="Undo (⌘Z)" disabled>Undo</button>
         <button type="button" id="btn-redo" class="btn btn-secondary btn-compact" title="Redo (⌘⇧Z)" disabled>Redo</button>
         <button type="button" id="btn-save" class="btn btn-compact">Save</button>
-        <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
-        <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
-        <button type="button" id="btn-export" class="btn btn-compact">Export CSV</button>
-        <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
       </div>
-      <div class="compact-row row-filters">
+      <div class="compact-row row-actions">
         <div class="filter-group-left">
           <label class="inline-field inline-field-filter">
             <span class="inline-label">Discipline</span>
@@ -74,18 +75,20 @@
             <select id="filter-status"><option value="">All</option></select>
           </label>
         </div>
-        <p class="inline-summary" id="inline-summary" aria-live="polite">
-          Activities: <span id="summary-activities">0</span> |
-          Hours: <span id="summary-hours">0</span> |
-          Disciplines: <span id="summary-disciplines">0</span> |
-          Hold: <span id="summary-hold">0</span>
-        </p>
+        <div class="row-actions-buttons">
+          <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
+          <button type="button" id="btn-duplicate" class="btn btn-secondary btn-compact">Duplicate Activity</button>
+          <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
+          <button type="button" id="btn-export" class="btn btn-compact">Export CSV</button>
+          <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
+        </div>
+        <p class="inline-summary" id="inline-summary" aria-live="polite">Activities: <span id="summary-activities">0</span> | Hours: <span id="summary-hours">0</span> | Disciplines: <span id="summary-disciplines">0</span> | Hold: <span id="summary-hold">0</span></p>
       </div>
     </section>
 
     <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
 
-    <section class="panel panel-activity-builder" aria-label="Activity Builder">
+    <section id="activity-builder-panel" class="panel panel-activity-builder" aria-label="Activity Builder">
       <div class="table-wrap">
         <table id="schedule-table">
           <colgroup id="schedule-cols"></colgroup>
@@ -96,7 +99,7 @@
               </th>
               <th class="col-include col-sticky-h" data-col="include"><span class="th-label">Include</span></th>
               <th class="col-sticky-h" data-col="activityId"><span class="th-label">Activity ID</span></th>
-              <th class="col-sticky-h" data-col="discipline"><span class="th-label">Discipline</span></th>
+              <th class="col-sticky-h col-sticky-last" data-col="discipline"><span class="th-label">Discipline</span></th>
               <th data-col="action"><span class="th-label">Action</span></th>
               <th data-col="deliverable"><span class="th-label">Deliverable</span></th>
               <th data-col="activityName"><span class="th-label">Activity Name</span></th>

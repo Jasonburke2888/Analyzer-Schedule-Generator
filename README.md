@@ -1,4 +1,4 @@
-# FEL-3 Analyzer Schedule Template Builder (v2.6)
+# FEL-3 Analyzer Schedule Template Builder (v2.7)
 
 Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages.
 
@@ -10,6 +10,16 @@ python3 -m http.server 8080
 ```
 
 Open [http://localhost:8080](http://localhost:8080)
+
+## v2.7 highlights
+
+- **Schedule-builder focus** — two compact toolbar rows; project admin (New/Clone/Delete) in Manage Lists → Projects only
+- **Row 1** — Project, Project ID, Client, Stage, PM, Zoom (100–175%, default 125%), Undo, Redo, Save
+- **Row 2** — filters, Add/Duplicate/Delete/Export/Manage Lists, inline summary on the right
+- **Grid zoom** — scales row height, fonts, and inputs in Activity Builder only; persisted to localStorage
+- **Wider Activity Name** column; narrower Status, Lead, Notes, and duration columns
+- **Duplicate Activity** — copies selected row(s) with next Activity ID
+- Frozen header + sticky columns (Include, Activity ID, Discipline) with subtle shadow
 
 ## v2.6 highlights
 

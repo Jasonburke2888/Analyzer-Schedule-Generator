@@ -1,4 +1,4 @@
-/* FEL-3 Analyzer Schedule Template Builder — v2.6 compact scheduler layout */
+/* FEL-3 Analyzer Schedule Template Builder — v2.7 schedule-builder layout */
 
 *,
 *::before,
@@ -16,6 +16,9 @@
   --blue2: #2f75b5;
   --green: #17803d;
   --red: #b42318;
+  --chrome-height: 72px;
+  --control-h: 24px;
+  --grid-zoom: 1.25;
 }
 
 body {
@@ -40,8 +43,9 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .app-shell {
@@ -52,10 +56,9 @@ body {
   overflow: hidden;
 }
 
-/* Two-row compact toolbar */
 .compact-toolbar {
   margin: 2px 6px 0;
-  padding: 2px 4px;
+  padding: 3px 5px;
   flex-shrink: 0;
   background: var(--card);
   border: 1px solid var(--line);
@@ -63,12 +66,20 @@ body {
 }
 
 .status-message {
-  margin: 0 6px;
-  min-height: 0.65rem;
+  margin: 0;
+  padding: 0 6px;
+  min-height: 0;
+  max-height: 0;
+  overflow: hidden;
   font-size: 10px;
   line-height: 1.2;
   color: var(--green);
   flex-shrink: 0;
+}
+
+.status-message.visible {
+  max-height: 14px;
+  margin: 1px 6px 0;
 }
 
 .status-message.error {
@@ -77,9 +88,10 @@ body {
 
 .panel,
 .panel-activity-builder {
-  margin: 1px 6px 4px;
-  flex: 1 1 auto;
+  margin: 2px 6px 4px;
+  height: calc(100vh - var(--chrome-height));
   min-height: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   background: var(--card);
@@ -92,36 +104,46 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3px 6px;
-  padding: 1px 0;
+  gap: 4px 8px;
+  padding: 2px 0;
 }
 
 .compact-row + .compact-row {
   border-top: 1px solid #eef2f7;
   margin-top: 0;
-  padding-top: 2px;
+  padding-top: 3px;
 }
 
 .row-controls {
-  gap: 3px 5px;
+  gap: 4px 6px;
 }
 
-.row-filters {
-  justify-content: space-between;
+.row-actions {
+  justify-content: flex-start;
+  align-items: center;
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .filter-group-left {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 3px 6px;
-  flex: 1 1 auto;
+  gap: 4px 6px;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
+.row-actions-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
 .inline-summary {
-  margin: 0;
+  margin: 0 0 0 auto;
   padding: 0 2px;
   font-size: 11px;
   font-weight: 600;
@@ -133,21 +155,22 @@ body {
 .toolbar-divider {
   display: inline-block;
   width: 1px;
-  height: 18px;
+  height: 20px;
   background: var(--line);
-  margin: 0 1px;
+  margin: 0 2px;
   flex-shrink: 0;
 }
 
 .inline-field {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   margin: 0;
+  flex-shrink: 0;
 }
 
 .inline-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   white-space: nowrap;
@@ -156,28 +179,33 @@ body {
 .inline-field select,
 .inline-field input[type="text"] {
   border: 1px solid var(--line);
-  border-radius: 3px;
-  padding: 1px 4px;
-  min-height: 22px;
-  font-size: 11px;
+  border-radius: 4px;
+  padding: 2px 5px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  font-size: 12px;
+  line-height: 1.2;
   background: #fff;
   color: var(--ink);
 }
 
 .inline-field-project select { min-width: 120px; }
-.inline-field-id select { min-width: 64px; }
-.inline-field-client input { width: 72px; }
-.inline-field-stage select { min-width: 72px; }
-.inline-field-pm select { min-width: 88px; }
-.inline-field-filter select { min-width: 96px; }
-.inline-field-filter-sm select { min-width: 60px; }
+.inline-field-id select { min-width: 68px; }
+.inline-field-client input { width: 80px; }
+.inline-field-stage select { min-width: 76px; }
+.inline-field-pm select { min-width: 92px; }
+.inline-field-zoom select { min-width: 58px; }
+.inline-field-filter select { min-width: 88px; }
+.inline-field-filter-sm select { min-width: 58px; }
 
 .btn-compact {
-  padding: 2px 6px;
+  padding: 3px 8px;
   font-size: 11px;
-  border-radius: 3px;
-  min-height: 22px;
+  border-radius: 4px;
+  height: var(--control-h);
+  min-height: var(--control-h);
   line-height: 1.2;
+  font-weight: 600;
 }
 
 .btn-compact:disabled {
@@ -203,7 +231,6 @@ body {
   margin-top: 4px;
 }
 
-/* Legacy filter-group (modal) */
 .filter-group label {
   font-size: 12px;
   color: var(--muted);
@@ -220,22 +247,6 @@ body {
   background: #fff;
   font-size: 14px;
   color: var(--ink);
-}
-
-.filter-group input[type="text"] {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
-  min-height: 36px;
-  min-width: 120px;
-  background: #fff;
-  font-size: 14px;
-  color: var(--ink);
-}
-
-.filter-group-narrow input[type="text"] {
-  min-width: 100px;
-  max-width: 140px;
 }
 
 .btn-small {
@@ -285,62 +296,68 @@ select option.add-option {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  max-height: none;
+  height: 100%;
 }
 
-table {
+#schedule-table {
   border-collapse: separate;
   border-spacing: 0;
   width: 100%;
   table-layout: fixed;
+  --grid-font: calc(11px * var(--grid-zoom));
+  --grid-row-h: calc(22px * var(--grid-zoom));
+  --grid-input-h: calc(20px * var(--grid-zoom));
+  --grid-th-font: calc(10px * var(--grid-zoom));
+  --grid-th-h: calc(24px * var(--grid-zoom));
 }
 
-th.col-sticky-h,
-td.col-sticky-h {
+#schedule-table th.col-sticky-h,
+#schedule-table td.col-sticky-h {
   position: sticky;
   z-index: 2;
   background: #fff;
 }
 
-thead th.col-sticky-h {
+#schedule-table thead th.col-sticky-h {
   z-index: 7;
   background: #eef5fb;
 }
 
-th,
-td {
+#schedule-table th,
+#schedule-table td {
   border-bottom: 1px solid #eef2f7;
-  padding: 1px 3px;
+  padding: calc(2px * var(--grid-zoom)) calc(4px * var(--grid-zoom));
   vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
-thead {
+#schedule-table thead {
   position: sticky;
   top: 0;
   z-index: 4;
 }
 
-th {
+#schedule-table th {
   position: sticky;
   top: 0;
   z-index: 3;
   background: #eef5fb;
   text-align: left;
-  font-size: 9px;
+  font-size: var(--grid-th-font);
   color: #344054;
   white-space: nowrap;
   user-select: none;
-  box-shadow: 0 1px 0 var(--line);
+  height: var(--grid-th-h);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
 }
 
-tbody tr {
-  height: 20px;
+#schedule-table tbody tr {
+  height: var(--grid-row-h);
 }
 
-.th-label {
+#schedule-table .th-label {
   display: inline-block;
   max-width: calc(100% - 8px);
   overflow: hidden;
@@ -348,7 +365,7 @@ tbody tr {
   vertical-align: middle;
 }
 
-th .col-resizer {
+#schedule-table th .col-resizer {
   position: absolute;
   right: 0;
   top: 0;
@@ -363,90 +380,107 @@ body.col-resizing {
   user-select: none;
 }
 
-.col-activity-name {
+#schedule-table th.col-sticky-last,
+#schedule-table td.col-sticky-last {
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.12);
+}
+
+#schedule-table thead th.col-sticky-last {
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08);
+}
+
+#schedule-table .col-activity-name {
   font-weight: 600;
   color: #344054;
   background: #f8fafc;
+  white-space: nowrap;
+  font-size: var(--grid-font);
 }
 
-tbody tr:nth-child(even) {
+#schedule-table tbody tr:nth-child(even) {
   background: #f8fafc;
 }
 
-tbody tr:nth-child(even) td.col-sticky-h {
+#schedule-table tbody tr:nth-child(even) td.col-sticky-h {
   background: #f3f6f9;
 }
 
-tbody tr:hover {
+#schedule-table tbody tr:hover {
   background: #eef6ff;
 }
 
-tbody tr:hover td.col-sticky-h {
+#schedule-table tbody tr:hover td.col-sticky-h {
   background: #e5f0fa;
 }
 
-tbody tr.excluded {
+#schedule-table tbody tr.excluded {
   opacity: 0.55;
   background: #f4f4f4;
 }
 
-tbody tr.excluded:nth-child(even) td.col-sticky-h {
+#schedule-table tbody tr.excluded:nth-child(even) td.col-sticky-h {
   background: #ececec;
 }
 
-tbody tr.row-hidden {
+#schedule-table tbody tr.row-hidden {
   display: none;
 }
 
-.col-select,
-.col-include {
+#schedule-table .col-select,
+#schedule-table .col-include {
   width: 2.5rem;
   text-align: center;
 }
 
-.col-num {
+#schedule-table .col-num {
   width: 5rem;
 }
 
-td input[type="text"],
-td input[type="number"],
-td select {
+#schedule-table td input[type="text"],
+#schedule-table td input[type="number"],
+#schedule-table td select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 3px;
-  padding: 1px 3px;
-  min-height: 18px;
-  font-size: 10px;
-  line-height: 1.15;
+  padding: calc(1px * var(--grid-zoom)) calc(3px * var(--grid-zoom));
+  min-height: var(--grid-input-h);
+  max-height: var(--grid-input-h);
+  height: var(--grid-input-h);
+  font-size: var(--grid-font);
+  line-height: 1.2;
   background: #fff;
   color: var(--ink);
 }
 
-td.col-discipline select,
-td.col-deliverable select,
-td.col-action select,
-td.col-discipline-lead select {
+#schedule-table td.col-discipline select,
+#schedule-table td.col-deliverable select,
+#schedule-table td.col-action select,
+#schedule-table td.col-discipline-lead select {
   min-width: 0;
 }
 
-td textarea {
-  min-height: 18px;
-  max-height: 32px;
-  padding: 1px 3px;
-  font-size: 10px;
-  line-height: 1.15;
+#schedule-table td textarea {
+  min-height: var(--grid-input-h);
+  max-height: calc(var(--grid-input-h) * 1.6);
+  padding: calc(1px * var(--grid-zoom)) calc(3px * var(--grid-zoom));
+  font-size: var(--grid-font);
+  line-height: 1.2;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  resize: vertical;
 }
 
-td input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
+#schedule-table td input[type="checkbox"] {
+  width: calc(14px * var(--grid-zoom));
+  height: calc(14px * var(--grid-zoom));
 }
 
-.computed {
+#schedule-table .computed {
   font-weight: 600;
   color: #344054;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--grid-font);
 }
 
 .project-toolbar {
@@ -456,7 +490,6 @@ td input[type="checkbox"] {
   margin-bottom: 8px;
 }
 
-/* Manage Lists modal */
 .modal[hidden] {
   display: none;
 }
@@ -612,20 +645,20 @@ td input[type="checkbox"] {
   margin: 0;
 }
 
-@media (max-width: 1100px) {
-  .row-filters {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 1200px) {
+  .row-actions {
+    flex-wrap: wrap;
   }
 
   .inline-summary {
-    text-align: left;
-    white-space: normal;
+    margin-left: 0;
+    width: 100%;
+    text-align: right;
   }
 }
 
 @media (max-width: 900px) {
-  .compact-row {
-    gap: 4px;
+  .row-actions-buttons {
+    flex-wrap: wrap;
   }
 }

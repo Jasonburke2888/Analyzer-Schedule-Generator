@@ -1,5 +1,5 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.6)
+ * FEL-3 Analyzer Schedule Template Builder (v2.7)
  *
  * RENDER / EDIT / SAVE FLOW
  * -------------------------
@@ -51,22 +51,24 @@
     'Structural', 'PMAC', 'Project Controls', 'Procurement', 'Construction', 'Other',
   ];
   const MAX_UNDO = 50;
+  const GRID_ZOOM_OPTIONS = [100, 125, 150, 175];
+  const DEFAULT_GRID_ZOOM = 125;
 
   const DEFAULT_COLUMN_WIDTHS = {
     select: 32,
     include: 45,
-    activityId: 70,
-    discipline: 140,
-    action: 85,
-    deliverable: 150,
-    activityName: 240,
-    baseDur: 55,
-    customDur: 65,
-    baseHrs: 55,
-    customHrs: 65,
-    owner: 110,
-    status: 85,
-    notes: 200,
+    activityId: 68,
+    discipline: 128,
+    action: 82,
+    deliverable: 128,
+    activityName: 420,
+    baseDur: 46,
+    customDur: 50,
+    baseHrs: 46,
+    customHrs: 50,
+    owner: 82,
+    status: 68,
+    notes: 110,
   };
   const COLUMN_ORDER = [
     'select', 'include', 'activityId', 'discipline', 'action', 'deliverable',
@@ -105,9 +107,11 @@
   let undoStack = [];
   let redoStack = [];
   let isRestoringHistory = false;
+  let gridZoom = DEFAULT_GRID_ZOOM;
 
   const tbody = document.getElementById('activities-body');
   const table = document.getElementById('schedule-table');
+  const activityBuilderPanel = document.getElementById('activity-builder-panel');
   const colgroup = document.getElementById('schedule-cols');
   const statusMessage = document.getElementById('status-message');
   const summaryActivitiesEl = document.getElementById('summary-activities');
@@ -121,6 +125,7 @@
   const projectClientInput = document.getElementById('project-client');
   const projectFelStageSelect = document.getElementById('project-fel-stage');
   const pmSelect = document.getElementById('pm-select');
+  const gridZoomSelect = document.getElementById('grid-zoom-select');
   const filterDiscipline = document.getElementById('filter-discipline');
   const filterDeliverable = document.getElementById('filter-deliverable');
   const filterAction = document.getElementById('filter-action');
@@ -149,18 +154,20 @@
     return '';
   }
 
-  /** Derive Deliverable from hidden Base Activity Name (activityName field). */
+  /** Derive Deliverable from hidden Base Activity Name when Deliverable is empty. */
   function deriveDeliverableFromBaseName(activity) {
     const base = (activity.activityName || '').trim();
     if (!base || base.indexOf(NAME_SEP) < 0) return;
     const sepAt = base.indexOf(NAME_SEP);
     const leadingAction = base.slice(0, sepAt).trim();
     const remainder = base.slice(sepAt + NAME_SEP.length).trim();
+    if (!remainder) return;
     if (!activity.activityType && leadingAction) {
       activity.activityType = leadingAction;
     }
     const action = (activity.activityType || '').trim();
-    if (action && base.startsWith(action + NAME_SEP)) {
+    if (!action || !base.startsWith(action + NAME_SEP)) return;
+    if (!activity.deliverable) {
       activity.deliverable = remainder;
     }
   }
@@ -595,6 +602,11 @@
     } else {
       columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS);
     }
+    if (GRID_ZOOM_OPTIONS.indexOf(parsed.gridZoom) >= 0) {
+      gridZoom = parsed.gridZoom;
+    } else {
+      gridZoom = DEFAULT_GRID_ZOOM;
+    }
   }
 
   function loadFromStorage() {
@@ -643,8 +655,26 @@
       currentProjectName: currentProjectName,
       lists: lists,
       columnWidths: columnWidths,
+      gridZoom: gridZoom,
       savedAt: new Date().toISOString(),
     }));
+  }
+
+  function applyGridZoom() {
+    const scale = gridZoom / 100;
+    if (activityBuilderPanel) {
+      activityBuilderPanel.style.setProperty('--grid-zoom', String(scale));
+    }
+    if (gridZoomSelect) gridZoomSelect.value = String(gridZoom);
+  }
+
+  function handleGridZoomChange() {
+    const next = parseInt(gridZoomSelect.value, 10);
+    if (GRID_ZOOM_OPTIONS.indexOf(next) < 0) return;
+    gridZoom = next;
+    applyGridZoom();
+    saveToStorage();
+    updateLayoutMetrics();
   }
 
   function syncProjectSetupUI() {
@@ -1118,6 +1148,8 @@
         table.querySelectorAll('thead th[data-col="' + key + '"], tbody td[data-col="' + key + '"]').forEach(function (el) {
           el.classList.add('col-sticky-h');
           el.style.left = left + 'px';
+          if (key === 'discipline') el.classList.add('col-sticky-last');
+          else el.classList.remove('col-sticky-last');
         });
       }
       left += w;
@@ -1179,6 +1211,7 @@
     updateSummary();
     refreshListDropdowns();
     selectAllCheckbox.checked = false;
+    updateLayoutMetrics();
   }
 
   function buildRow(activity) {
@@ -1243,7 +1276,7 @@
   function buildListSelectCell(field, value) {
     const td = document.createElement('td');
     td.dataset.col = field;
-    if (field === 'discipline') td.className = 'col-discipline';
+    if (field === 'discipline') td.className = 'col-discipline col-sticky-h col-sticky-last';
     if (field === 'deliverable') td.className = 'col-deliverable';
     const select = document.createElement('select');
     select.dataset.field = field;
@@ -1526,11 +1559,68 @@
   function showStatus(message, isError) {
     statusMessage.textContent = message;
     statusMessage.classList.toggle('error', !!isError);
+    statusMessage.classList.toggle('visible', !!message);
+    updateLayoutMetrics();
     if (message && !isError) {
       window.setTimeout(function () {
-        if (statusMessage.textContent === message) statusMessage.textContent = '';
+        if (statusMessage.textContent === message) {
+          statusMessage.textContent = '';
+          statusMessage.classList.remove('visible', 'error');
+          updateLayoutMetrics();
+        }
       }, 3000);
     }
+  }
+
+  function updateLayoutMetrics() {
+    const header = document.querySelector('.app-header');
+    const toolbar = document.querySelector('.compact-toolbar');
+    const status = document.getElementById('status-message');
+    let chrome = 0;
+    if (header) chrome += header.getBoundingClientRect().height;
+    if (toolbar) chrome += toolbar.getBoundingClientRect().height;
+    if (status && status.classList.contains('visible')) {
+      chrome += status.getBoundingClientRect().height;
+    }
+    chrome += 3;
+    document.documentElement.style.setProperty('--chrome-height', chrome + 'px');
+  }
+
+  function cloneActivityFromSource(source) {
+    return createActivity({
+      include: source.include,
+      discipline: source.discipline,
+      deliverable: source.deliverable,
+      activityId: nextActivityId(),
+      activityType: source.activityType,
+      activityName: source.activityName,
+      customActivityName: source.customActivityName,
+      originalDuration: source.originalDuration,
+      customDuration: source.customDuration,
+      budgetedHours: source.budgetedHours,
+      customHours: source.customHours,
+      owner: source.owner,
+      status: source.status,
+      leadNotes: source.leadNotes,
+      selected: false,
+    });
+  }
+
+  function duplicateSelected() {
+    const selected = activities.filter(function (a) { return a.selected; });
+    if (!selected.length) {
+      showStatus('Select one or more activities to duplicate.', true);
+      return;
+    }
+    pushUndoState();
+    for (let i = selected.length - 1; i >= 0; i--) {
+      const source = selected[i];
+      const idx = activities.findIndex(function (a) { return a._id === source._id; });
+      if (idx >= 0) activities.splice(idx + 1, 0, cloneActivityFromSource(source));
+    }
+    renderTable();
+    saveToStorage();
+    showStatus('Duplicated ' + selected.length + ' activit' + (selected.length === 1 ? 'y' : 'ies') + '.');
   }
 
   function addActivity() {
@@ -1728,6 +1818,7 @@
     });
 
     document.getElementById('btn-add').addEventListener('click', addActivity);
+    document.getElementById('btn-duplicate').addEventListener('click', duplicateSelected);
     document.getElementById('btn-delete').addEventListener('click', deleteSelected);
     document.getElementById('btn-delete-confirm').addEventListener('click', confirmDeleteWithPassword);
     deletePasswordInput.addEventListener('keydown', function (event) {
@@ -1745,10 +1836,8 @@
     });
     document.getElementById('btn-reset').addEventListener('click', resetToTemplate);
     document.getElementById('btn-export').addEventListener('click', exportIncludedCsv);
-    document.getElementById('btn-project-new').addEventListener('click', handleNewProject);
-    document.getElementById('btn-project-clone').addEventListener('click', handleCloneProject);
-    document.getElementById('btn-project-delete').addEventListener('click', handleDeleteProject);
     document.getElementById('btn-manage-lists').addEventListener('click', openManageListsModal);
+    if (gridZoomSelect) gridZoomSelect.addEventListener('change', handleGridZoomChange);
     selectAllCheckbox.addEventListener('change', handleSelectAll);
 
     projectSelect.addEventListener('change', handleProjectSelectChange);
@@ -1806,7 +1895,10 @@
         showStatus(err.message + ' See README.', true);
       }
     }
+    applyGridZoom();
     updateUndoRedoButtons();
+    updateLayoutMetrics();
+    window.addEventListener('resize', updateLayoutMetrics);
   }
 
   init();
