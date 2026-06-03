@@ -1,3 +1,876 @@
+<!-- Standalone bundle: HTML + CSS + JS + embedded activities.csv -->
+<!-- Regenerate: node scripts/build-standalone.js -->
+<!DOCTYPE html>
+<!-- Standalone offline bundle -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FEL-3 Analyzer Schedule Template Builder</title>
+  <style>
+/* FEL-3 Analyzer Schedule Template Builder — v2.7 schedule-builder layout */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #f6f8fb;
+  --card: #fff;
+  --ink: #172033;
+  --muted: #667085;
+  --line: #d9e2ef;
+  --blue: #1f4e78;
+  --blue2: #2f75b5;
+  --green: #17803d;
+  --red: #b42318;
+  --chrome-height: 72px;
+  --control-h: 24px;
+  --grid-zoom: 1.25;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-header {
+  background: linear-gradient(135deg, var(--blue), #123550);
+  color: #fff;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.app-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compact-toolbar {
+  margin: 2px 6px 0;
+  padding: 3px 5px;
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.status-message {
+  margin: 0;
+  padding: 0 6px;
+  min-height: 0;
+  max-height: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.status-message.visible {
+  max-height: 14px;
+  margin: 1px 6px 0;
+}
+
+.status-message.error {
+  color: var(--red);
+}
+
+.panel,
+.panel-activity-builder {
+  margin: 2px 6px 4px;
+  height: calc(100vh - var(--chrome-height));
+  min-height: 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.compact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 2px 0;
+}
+
+.compact-row + .compact-row {
+  border-top: 1px solid #eef2f7;
+  margin-top: 0;
+  padding-top: 3px;
+}
+
+.row-controls {
+  gap: 4px 6px;
+}
+
+.row-actions {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.filter-group-left {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.row-actions-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.inline-summary {
+  margin: 0 0 0 auto;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.toolbar-divider {
+  display: inline-block;
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.inline-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.inline-field select,
+.inline-field input[type="text"] {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 5px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  font-size: 12px;
+  line-height: 1.2;
+  background: #fff;
+  color: var(--ink);
+}
+
+.inline-field-project select { min-width: 120px; }
+.inline-field-id select { min-width: 68px; }
+.inline-field-client input { width: 80px; }
+.inline-field-stage select { min-width: 76px; }
+.inline-field-pm select { min-width: 92px; }
+.inline-field-zoom select { min-width: 58px; }
+.inline-field-filter select { min-width: 88px; }
+.inline-field-filter-sm select { min-width: 58px; }
+
+.btn-compact {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.btn-compact:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.btn-compact:disabled:hover {
+  filter: none;
+}
+
+.modal-dialog-narrow {
+  max-width: 360px;
+}
+
+.modal-body input[type="password"] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.filter-group label {
+  font-size: 12px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.filter-group select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 36px;
+  min-width: 160px;
+  background: #fff;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.btn-small {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+select option.add-option {
+  font-weight: 600;
+  color: var(--blue2);
+}
+
+.btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--blue2);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  filter: brightness(1.05);
+}
+
+.btn-secondary {
+  background: #667085;
+}
+
+.btn-danger {
+  background: var(--red);
+}
+
+.btn-green {
+  background: var(--green);
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  height: 100%;
+}
+
+#schedule-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
+  --grid-font: calc(11px * var(--grid-zoom));
+  --grid-row-h: calc(22px * var(--grid-zoom));
+  --grid-input-h: calc(20px * var(--grid-zoom));
+  --grid-th-font: calc(10px * var(--grid-zoom));
+  --grid-th-h: calc(24px * var(--grid-zoom));
+}
+
+#schedule-table th.col-sticky-h,
+#schedule-table td.col-sticky-h {
+  position: sticky;
+  z-index: 2;
+  background: #fff;
+}
+
+#schedule-table thead th.col-sticky-h {
+  z-index: 7;
+  background: #eef5fb;
+}
+
+#schedule-table th,
+#schedule-table td {
+  border-bottom: 1px solid #eef2f7;
+  padding: calc(2px * var(--grid-zoom)) calc(4px * var(--grid-zoom));
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+#schedule-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+#schedule-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #eef5fb;
+  text-align: left;
+  font-size: var(--grid-th-font);
+  color: #344054;
+  white-space: nowrap;
+  user-select: none;
+  height: var(--grid-th-h);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+}
+
+#schedule-table tbody tr {
+  height: var(--grid-row-h);
+}
+
+#schedule-table .th-label {
+  display: inline-block;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+#schedule-table th .col-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+}
+
+body.col-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+#schedule-table th.col-sticky-last,
+#schedule-table td.col-sticky-last {
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.12);
+}
+
+#schedule-table thead th.col-sticky-last {
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.12), 0 2px 4px rgba(15, 23, 42, 0.08);
+}
+
+#schedule-table .col-activity-name {
+  font-weight: 600;
+  color: #344054;
+  background: #f8fafc;
+  white-space: nowrap;
+  font-size: var(--grid-font);
+}
+
+#schedule-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+#schedule-table tbody tr:nth-child(even) td.col-sticky-h {
+  background: #f3f6f9;
+}
+
+#schedule-table tbody tr:hover {
+  background: #eef6ff;
+}
+
+#schedule-table tbody tr:hover td.col-sticky-h {
+  background: #e5f0fa;
+}
+
+#schedule-table tbody tr.excluded {
+  opacity: 0.55;
+  background: #f4f4f4;
+}
+
+#schedule-table tbody tr.excluded:nth-child(even) td.col-sticky-h {
+  background: #ececec;
+}
+
+#schedule-table tbody tr.row-hidden {
+  display: none;
+}
+
+#schedule-table .col-select,
+#schedule-table .col-include {
+  width: 2.5rem;
+  text-align: center;
+}
+
+#schedule-table .col-num {
+  width: 5rem;
+}
+
+#schedule-table td input[type="text"],
+#schedule-table td input[type="number"],
+#schedule-table td select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: calc(1px * var(--grid-zoom)) calc(3px * var(--grid-zoom));
+  min-height: var(--grid-input-h);
+  max-height: var(--grid-input-h);
+  height: var(--grid-input-h);
+  font-size: var(--grid-font);
+  line-height: 1.2;
+  background: #fff;
+  color: var(--ink);
+}
+
+#schedule-table td.col-discipline select,
+#schedule-table td.col-deliverable select,
+#schedule-table td.col-action select,
+#schedule-table td.col-discipline-lead select {
+  min-width: 0;
+}
+
+#schedule-table td textarea {
+  min-height: var(--grid-input-h);
+  max-height: calc(var(--grid-input-h) * 1.6);
+  padding: calc(1px * var(--grid-zoom)) calc(3px * var(--grid-zoom));
+  font-size: var(--grid-font);
+  line-height: 1.2;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  resize: vertical;
+}
+
+#schedule-table td input[type="checkbox"] {
+  width: calc(14px * var(--grid-zoom));
+  height: calc(14px * var(--grid-zoom));
+}
+
+#schedule-table .computed {
+  font-weight: 600;
+  color: #344054;
+  white-space: nowrap;
+  font-size: var(--grid-font);
+}
+
+.project-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal-dialog {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-dialog-wide {
+  max-width: 620px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 16px;
+}
+
+.modal-tab {
+  border: 0;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.modal-tab.active {
+  color: var(--blue2);
+  border-bottom-color: var(--blue2);
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.list-editor-toolbar {
+  margin-bottom: 10px;
+}
+
+.list-editor {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.list-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.list-item-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.list-editor-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.modal-body label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 12px 0 4px;
+}
+
+.modal-body label:first-child {
+  margin-top: 0;
+}
+
+.modal-body textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.modal-footer .hint {
+  margin: 0;
+}
+
+@media (max-width: 1200px) {
+  .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .inline-summary {
+    margin-left: 0;
+    width: 100%;
+    text-align: right;
+  }
+}
+
+@media (max-width: 900px) {
+  .row-actions-buttons {
+    flex-wrap: wrap;
+  }
+}
+
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>FEL-3 Analyzer Schedule Builder</h1>
+  </header>
+
+  <div class="app-shell">
+    <section class="compact-toolbar" aria-label="Project controls, filters, and actions">
+      <div class="compact-row row-controls">
+        <label class="inline-field inline-field-project">
+          <span class="inline-label">Project</span>
+          <select id="project-select"></select>
+        </label>
+        <label class="inline-field inline-field-id">
+          <span class="inline-label">Project ID</span>
+          <select id="project-id-select"></select>
+        </label>
+        <label class="inline-field inline-field-client">
+          <span class="inline-label">Client</span>
+          <input id="project-client" type="text" placeholder="Client">
+        </label>
+        <label class="inline-field inline-field-stage">
+          <span class="inline-label">Stage</span>
+          <select id="project-fel-stage"></select>
+        </label>
+        <label class="inline-field inline-field-pm">
+          <span class="inline-label">PM</span>
+          <select id="pm-select"></select>
+        </label>
+        <span class="toolbar-divider" aria-hidden="true"></span>
+        <label class="inline-field inline-field-zoom">
+          <span class="inline-label">Zoom</span>
+          <select id="grid-zoom-select" aria-label="Activity Builder zoom">
+            <option value="100">100%</option>
+            <option value="125" selected>125%</option>
+            <option value="150">150%</option>
+            <option value="175">175%</option>
+          </select>
+        </label>
+        <button type="button" id="btn-undo" class="btn btn-secondary btn-compact" title="Undo (⌘Z)" disabled>Undo</button>
+        <button type="button" id="btn-redo" class="btn btn-secondary btn-compact" title="Redo (⌘⇧Z)" disabled>Redo</button>
+        <button type="button" id="btn-save" class="btn btn-compact">Save</button>
+      </div>
+      <div class="compact-row row-actions">
+        <div class="filter-group-left">
+          <label class="inline-field inline-field-filter">
+            <span class="inline-label">Discipline</span>
+            <select id="filter-discipline"><option value="">All</option></select>
+          </label>
+          <label class="inline-field inline-field-filter-sm">
+            <span class="inline-label">Action</span>
+            <select id="filter-action"><option value="">All</option></select>
+          </label>
+          <label class="inline-field inline-field-filter">
+            <span class="inline-label">Deliverable</span>
+            <select id="filter-deliverable"><option value="">All</option></select>
+          </label>
+          <label class="inline-field inline-field-filter-sm">
+            <span class="inline-label">Include</span>
+            <select id="filter-include">
+              <option value="">All</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label class="inline-field inline-field-filter-sm">
+            <span class="inline-label">Status</span>
+            <select id="filter-status"><option value="">All</option></select>
+          </label>
+        </div>
+        <div class="row-actions-buttons">
+          <button type="button" id="btn-add" class="btn btn-green btn-compact">Add Activity</button>
+          <button type="button" id="btn-duplicate" class="btn btn-secondary btn-compact">Duplicate Activity</button>
+          <button type="button" id="btn-delete" class="btn btn-danger btn-compact">Delete Selected</button>
+          <button type="button" id="btn-export" class="btn btn-compact">Export CSV</button>
+          <button type="button" id="btn-manage-lists" class="btn btn-secondary btn-compact">Manage Lists</button>
+        </div>
+        <p class="inline-summary" id="inline-summary" aria-live="polite">Activities: <span id="summary-activities">0</span> | Hours: <span id="summary-hours">0</span> | Disciplines: <span id="summary-disciplines">0</span> | Hold: <span id="summary-hold">0</span></p>
+      </div>
+    </section>
+
+    <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
+
+    <section id="activity-builder-panel" class="panel panel-activity-builder" aria-label="Activity Builder">
+      <div class="table-wrap">
+        <table id="schedule-table">
+          <colgroup id="schedule-cols"></colgroup>
+          <thead>
+            <tr>
+              <th class="col-select" data-col="select">
+                <input type="checkbox" id="select-all" aria-label="Select all visible rows">
+              </th>
+              <th class="col-include col-sticky-h" data-col="include"><span class="th-label">Include</span></th>
+              <th class="col-sticky-h" data-col="activityId"><span class="th-label">Activity ID</span></th>
+              <th class="col-sticky-h col-sticky-last" data-col="discipline"><span class="th-label">Discipline</span></th>
+              <th data-col="action"><span class="th-label">Action</span></th>
+              <th data-col="deliverable"><span class="th-label">Deliverable</span></th>
+              <th data-col="activityName"><span class="th-label">Activity Name</span></th>
+              <th class="col-num" data-col="baseDur"><span class="th-label">Base Dur</span></th>
+              <th class="col-num" data-col="customDur"><span class="th-label">Custom Dur</span></th>
+              <th class="col-num" data-col="baseHrs"><span class="th-label">Base Hrs</span></th>
+              <th class="col-num" data-col="customHrs"><span class="th-label">Custom Hrs</span></th>
+              <th data-col="owner"><span class="th-label">Discipline Lead</span></th>
+              <th data-col="status"><span class="th-label">Status</span></th>
+              <th data-col="notes"><span class="th-label">Notes</span></th>
+            </tr>
+          </thead>
+          <tbody id="activities-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="manage-lists-modal" class="modal" hidden aria-hidden="true">
+    <div class="modal-backdrop" data-action="close-modal"></div>
+    <div class="modal-dialog modal-dialog-wide" role="dialog" aria-labelledby="manage-lists-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="manage-lists-title">Manage Lists</h2>
+        <button type="button" class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-tabs" role="tablist">
+        <button type="button" class="modal-tab active" data-tab="projects" role="tab" aria-selected="true">Projects</button>
+        <button type="button" class="modal-tab" data-tab="projectIds" role="tab" aria-selected="false">Project IDs</button>
+        <button type="button" class="modal-tab" data-tab="disciplines" role="tab" aria-selected="false">Disciplines</button>
+        <button type="button" class="modal-tab" data-tab="deliverables" role="tab" aria-selected="false">Deliverables</button>
+        <button type="button" class="modal-tab" data-tab="actions" role="tab" aria-selected="false">Actions</button>
+        <button type="button" class="modal-tab" data-tab="pms" role="tab" aria-selected="false">PMs</button>
+      </div>
+      <div class="modal-body">
+        <div id="tab-panel-projects" class="tab-panel active" role="tabpanel">
+          <div class="list-editor-toolbar project-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="project-new">New Project</button>
+            <button type="button" class="btn btn-secondary btn-small" data-action="project-clone">Clone Project</button>
+            <button type="button" class="btn btn-danger btn-small" data-action="project-delete">Delete Project</button>
+            <button type="button" id="btn-reset" class="btn btn-secondary btn-small">Reset to Template</button>
+          </div>
+          <p class="hint">Switch projects from the Project dropdown. Each project stores its own activities and setup.</p>
+          <ul id="list-editor-projects" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-projectIds" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="projectIds">Add Project ID</button>
+          </div>
+          <ul id="list-editor-projectIds" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-disciplines" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="disciplines">Add Discipline</button>
+          </div>
+          <ul id="list-editor-disciplines" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-deliverables" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="deliverables">Add Deliverable</button>
+          </div>
+          <ul id="list-editor-deliverables" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-actions" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="actions">Add Action</button>
+          </div>
+          <ul id="list-editor-actions" class="list-editor"></ul>
+        </div>
+        <div id="tab-panel-pms" class="tab-panel" role="tabpanel" hidden>
+          <div class="list-editor-toolbar">
+            <button type="button" class="btn btn-green btn-small" data-action="add-list-item" data-list="pms">Add PM</button>
+          </div>
+          <ul id="list-editor-pms" class="list-editor"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-action="close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-password-modal" class="modal" hidden aria-hidden="true">
+    <div class="modal-backdrop" data-action="cancel-delete"></div>
+    <div class="modal-dialog modal-dialog-narrow" role="dialog" aria-labelledby="delete-password-title" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="delete-password-title">Confirm Delete</h2>
+        <button type="button" class="modal-close" data-action="cancel-delete" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="hint" id="delete-password-message"></p>
+        <label for="delete-password-input">Password</label>
+        <input id="delete-password-input" type="password" autocomplete="off">
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-delete-confirm" class="btn btn-danger btn-compact">Delete</button>
+        <button type="button" class="btn btn-secondary btn-compact" data-action="cancel-delete">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>window.EMBEDDED_ACTIVITIES_CSV = "include,discipline,deliverable,activity_id,activity_type,activity_name,custom_activity_name,original_duration,custom_duration,budgeted_hours,custom_hours,owner,status,lead_notes\r\nyes,Engineering Management,Engineering,1607_31000,Start,Start - FEL 3 Engineering,,0,,0,,,Not Started,\r\nyes,Engineering Management,Engineering Work Groups,1607_31010,Summary,Summary - FEL 3 Engineering Work Groups,,119,,544,,,Not Started,\r\nyes,PMAC,Engineering PMAC,1607_31020,Summary,Summary - FEL 3 Engineering PMAC,,160,,241,,,Not Started,\r\nyes,Engineering Management,Kick-Off Meeting,1607_31170,Perform,Perform - FEL 3 Kick-Off Meeting (bp & Engineering),,1,,0,,,Not Started,\r\nyes,PMAC,APP,1607_31030,Develop,Develop - FEL 3 APP,,20,,26,,,Not Started,\r\nyes,Project Services,Project Services Estimate,1607_31040,Develop,Develop - FEL 3 Project Services Estimate (PSE),,20,,25,,,Not Started,\r\nyes,PMAC,APP for Approval,1607_31060,Issue,Issue - FEL 3 APP for Approval,,0,,0,,,Not Started,\r\nyes,Project Assurance,APP,1607_31070,Review,Review - FEL 3 APP (BP),,2,,0,,,Not Started,\r\nyes,PMAC,APP,1607_31080,Approved,Approved - FEL 3 APP,,0,,0,,,Not Started,\r\nyes,Project Assurance,Setting Business Priorities,1607_31050,Develop,Develop - Setting Business Priorities,,1,,2,,,Not Started,\r\nyes,Project Assurance,Technical Practice Agreement,1607_31290,Develop,Develop - Technical Practice Agreement (TPA),,5,,2,,,Not Started,\r\nyes,Procurement,Procurement & Contracting Stategy,1607_31500,Develop,Develop - Procurement & Contracting Stategy,,5,,2,,,Not Started,\r\nyes,Project Assurance,Waste Plan,1607_31760,Develop,Develop - Waste Plan,,5,,2,,,Not Started,\r\nyes,Project Assurance,FEL Toolbox Review *,1607_31970,Perform,Perform - FEL Toolbox Review *,,1,,2,,,Not Started,\r\nyes,Project Assurance,Lessons Learned,1607_31670,Perform,Perform - Lessons Learned,,1,,2,,,Not Started,\r\nyes,Project Assurance,Constructability Review & 30% 3D Model Review,1607_31560,Perform,Perform - Constructability Review & 30% 3D Model Review,,1,,28,,,Not Started,\r\nyes,Project Assurance,Local  PHSSER,1607_31490,Prepare,Prepare - FEL 3  Local  PHSSER (pre-fill),,5,,2,,,Not Started,\r\nyes,Project Assurance,Risk Assessment,1607_31660,Perform,Perform - Risk Assessment,,1,,2,,,Not Started,\r\nyes,Project Assurance,Local PHSSER,1607_31610,Perform,Perform - FEL 3 Local PHSSER,,1,,2,,,Not Started,\r\nyes,Project Assurance,SIS I/O Assessment,1607_31550,Develop,Develop - SIS I/O Assessment,,10,,12,,,Not Started,\r\nyes,Project Assurance,SIS Safety Plan,1607_31530,Develop,Develop - SIS Safety Plan,,1,,6,,,Not Started,\r\nyes,Engineering,PEP / SoR / BoD,1607_31650,Develop,Develop - FEL 3 PEP / SoR / BoD,,10,,6,,,Not Started,\r\nyes,Project Assurance,PEP / SoR / BoD for Review,1607_31720,Issue,Issue - FEL 3 PEP / SoR / BoD for Review,,0,,0,,,Not Started,\r\nyes,Project Assurance,PEP / SoR / BoD,1607_31770,Review,Review - FEL 3 PEP / SoR / BoD,,5,,0,,,Not Started,\r\nyes,PMAC,PEP / SoR / BoD,1607_31800,Approved,Approved - FEL 3 PEP / SoR / BoD,,0,,0,,,Not Started,\r\nyes,Engineering,Preliminary 3D Model,1607_31090,Develop,Develop - Preliminary 3D Model,,59,,256,,,Not Started,\r\nyes,Project Assurance,3D Model Review,1607_31520,Perform,Perform - 3D Model Review (Internal),,1,,18,,,Not Started,\r\nyes,Project Assurance,3D Model Review  Comments,1607_31540,Incorporate,Incorporate - 3D Model Review (Internal) Comments,,1,,15,,,Not Started,\r\nyes,Project Assurance,3D Model Review W/bp,1607_31570,Perform,Perform - 3D Model Review W/bp,,1,,18,,,Not Started,\r\nyes,Project Assurance,3D Model Review W/bp Comments,1607_31590,Incorporate,Incorporate - 3D Model Review W/bp Comments,,3,,17,,,Not Started,\r\nyes,Process,Data Sheets,1607_31100,Develop,Develop - Data Sheets,,9,,18,,,Not Started,\r\nyes,Process,Process Design Basis,1607_31680,Develop,Develop - Process Design Basis,,10,,12,,,Not Started,\r\nyes,Mechanical,Equipment List,1607_31430,Develop,Develop - Equipment List,,5,,4,,,Not Started,\r\nyes,Mechanical,Existing Drawing Review/Nozzle Locations,1607_31460,Develop,Develop - Existing Drawing Review/Nozzle Locations,,10,,16,,,Not Started,\r\nyes,Mechanical,Specialty Item List,1607_31470,Develop,Develop - Specialty Item List,,5,,6,,,Not Started,\r\nyes,Mechanical,Equipment List/Specialty Items List,1607_31580,Finalize,Finalize - Equipment List/Specialty Items List,,5,,0,,,Not Started,\r\nyes,Piping,Laser Scanning & Registration,1607_31110,Perform,Perform - Laser Scanning & Registration,,19,,49,,,Not Started,\r\nyes,Piping,Cadworx Specs,1607_31210,Review,Review -  Cadworx Specs,,5,,8,,,Not Started,\r\nyes,I&C,Block Diagram/Instrument Index,1607_31130,Develop,Develop - Block Diagram/Instrument Index,,10,,52,,,Not Started,\r\nyes,I&C,Preliminary Datasheets,1607_31150,Develop,Develop - Preliminary Datasheets,,10,,65,,,Not Started,\r\nyes,I&C,Preliminary Loop Drawings,1607_31190,Develop,Develop - Preliminary Loop Drawings,,5,,26,,,Not Started,\r\nyes,I&C,DCS  Configuration Sheets,1607_31370,Develop,Develop - DCS  Configuration Sheets,,10,,26,,,Not Started,\r\nyes,I&C,C&E Redlines,1607_31380,Develop,Develop - C&E Redlines,,10,,20,,,Not Started,\r\nyes,I&C,Block Diagram,1607_31340,Finalize,Finalize - Block Diagram,,5,,4,,,Not Started,\r\nyes,I&C,Preliminary Instrument Index,1607_31350,Finalize,Finalize - Preliminary Instrument Index,,5,,4,,,Not Started,\r\nyes,I&C,Logic Diagrams,1607_31360,Develop,Develop - Logic Diagrams,,5,,23,,,Not Started,\r\nyes,Electrical,Preliminary Area Classification,1607_31120,Develop,Develop - Preliminary Area Classification,,38,,8,,,Not Started,\r\nyes,Electrical,Preliminary Electrical Plan Drawings,1607_31160,Develop,Develop - Preliminary Electrical Plan Drawings,,50,,40,,,Not Started,\r\nyes,Project Services,Preliminary Panel Schedules,1607_31200,Develop,Develop - Preliminary Panel Schedules,,45,,8,,,Not Started,\r\nyes,Electrical,Preliminary Block Diagrams,1607_31220,Develop,Develop - Preliminary Block Diagrams,,40,,20,,,Not Started,\r\nyes,Electrical,Preliminary Scope Narative,1607_31600,Develop,Develop - Preliminary Scope Narative,,15,,8,,,Not Started,\r\nyes,Civil/Structural,Demo Sketches,1607_31140,Develop,Develop - Demo Sketches,,25,,68,,,Not Started,\r\nyes,Civil/Structural,Platform Sketches,1607_31440,Develop,Develop - Platform Sketches,,16,,72,,,Not Started,\r\nyes,Civil/Structural,Platform Calcs,1607_31450,Develop,Develop - Platform Calcs,,16,,40,,,Not Started,\r\nyes,Process,P&IDs/Line Lists/Tie-In List,1607_31180,Develop,Develop - P&IDs/Line Lists/Tie-In List,,10,,144,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL for Initial Design Review,1607_31230,Draft,Draft - P&IDs/LL/TIL for Initial Design Review,,5,,8,,,Not Started,\r\nyes,Process,Initial P&ID Review,1607_31240,Perform,Perform - Initial P&ID Review,,1,,16,,,Not Started,\r\nyes,Process,P&ID Design Review Comments,1607_31250,Incorporate,Incorporate - P&ID Design Review Comments,,1,,14,,,Not Started,\r\nyes,Process,To PA's P&IDS IFR,1607_31260,Perform,Perform - To PA's P&IDS IFR,,1,,1,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL for Review,1607_31270,Issue,Issue - P&IDs/LL/TIL for Review,,0,,0,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL,1607_31280,BP Review,BP Review - P&IDs/LL/TIL,,4,,0,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL BP Review Meeting,1607_31300,Perform,Perform - P&IDs/LL/TIL BP Review Meeting,,1,,16,,,Not Started,\r\nyes,Process,BP P&IDs/LL/TIL Review Comments,1607_31310,Incorporate,Incorporate - BP P&IDs/LL/TIL Review Comments,,3,,14,,,Not Started,\r\nyes,Process,P&ID for Validation,1607_31320,Facilitator Review,Facilitator Review - P&ID for Validation,,7,,2,,,Not Started,\r\nyes,Process,P&ID Validation Meeting,1607_31330,Perform,Perform - P&ID Validation Meeting,,1,,16,,,Not Started,\r\nyes,Process,P&ID Validation Meeting,1607_31390,Incorporate Comments,Incorporate Comments - P&ID Validation Meeting,,3,,14,,,Not Started,\r\nyes,Process,To PA's  <IFH>,1607_31400,Perform,Perform - To PA's  <IFH>,,1,,1,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL for HAZOP,1607_31410,Issue,Issue - P&IDs/LL/TIL for HAZOP,,0,,0,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL for HAZOP,1607_31420,Client Review,Client Review - P&IDs/LL/TIL for HAZOP,,2,,0,,,Not Started,\r\nyes,Process,PHA Meeting,1607_31480,Perform,Perform - PHA Meeting,,1,,18,,,Not Started,\r\nyes,Process,PHA Comments,1607_31510,Incorporate,Incorporate - PHA Comments,,5,,14,,,Not Started,\r\nyes,Process,MOC Log,1607_31620,Review,Review - MOC Log,,1,,2,,,Not Started,\r\nyes,Process,To PA's Doc Control Review QA/QC,1607_31630,Perform,Perform - To PA's Doc Control Review QA/QC (IFD),,1,,1,,,Not Started,\r\nyes,Process,P&IDs/LL/TIL - IFE/IFD,1607_31640,Issue,Issue - P&IDs/LL/TIL - IFE/IFD,,0,,0,,,Not Started,\r\nyes,Project Services,Execute Project Services Estimate,1607_31700,Develop,Develop - Execute Project Services Estimate (PSE),,10,,25,,,Not Started,\r\nyes,Project Services,Execute APP,1607_31710,Develop,Develop - Execute APP,,10,,26,,,Not Started,\r\nyes,Project Services,Execute APP for Review,1607_31780,Issue,Issue - Execute APP for Review,,0,,0,,,Not Started,\r\nyes,Project Services,Execute APP,1607_31790,Review,Review - Execute APP (BP),,10,,0,,,Not Started,\r\nyes,Project Services,Execute APP,1607_31850,Approved,Approved - Execute APP,,0,,0,,,Not Started,\r\nyes,Project Services,MTOs & Estimate Inputs,1607_31690,Develop,Develop - MTOs & Estimate Inputs,,5,,32,,,Not Started,\r\nyes,Project Services,End of  Estimate & Basis,1607_31730,Develop,Develop - End of FEL 3 Estimate & Basis,,8,,30,,,Not Started,\r\nyes,Project Services,End of  Estimate & Basis for bp Review,1607_31810,Issue,Issue - End of FEL 3 Estimate & Basis for bp Review,,0,,0,,,Not Started,\r\nyes,Project Services,End of  Estimate & Basis,1607_31820,bp Review,bp Review - End of FEL 3 Estimate & Basis,,5,,0,,,Not Started,\r\nyes,Project Services,End of  Cost Estimate Review,1607_31860,Perform,Perform - End of FEL 3 Cost Estimate Review,,1,,4,,,Not Started,\r\nyes,Project Services,End of  Estimate Review Comments,1607_31870,Incorporate,Incorporate - End of FEL 3 Estimate Review Comments,,6,,8,,,Not Started,\r\nyes,Project Services,End of  Estimate & Basis for Approval,1607_31900,Issue,Issue - End of FEL 3 Estimate & Basis for Approval,,0,,0,,,Not Started,\r\nyes,Project Services,End of  Estimate & Basis,1607_31910,bp Review,bp Review - End of FEL 3 Estimate & Basis,,5,,0,,,Not Started,\r\nyes,Project Services,End of  Cost Estimate,1607_31940,Approved,Approved - End of FEL 3 Cost Estimate,,0,,0,,,Not Started,\r\nyes,Project Services,End of  Schedule & Basis,1607_31740,Develop,Develop - End of FEL 3 Schedule & Basis,,3,,10,,,Not Started,\r\nyes,Project Services,End of  Engineering Interactive Planning Session,1607_31750,Perform,Perform - End of FEL 3 Engineering Interactive Planning Session,,1,,7,,,Not Started,\r\nyes,Project Services,End of  Schedule & Basis for bp Review,1607_31830,Issue,Issue - End of FEL 3 Schedule & Basis for bp Review,,0,,0,,,Not Started,\r\nyes,Project Services,End of  Schedule & Basis,1607_31840,bp Review,bp Review - End of FEL 3 Schedule & Basis,,4,,0,,,Not Started,\r\nyes,Project Services,End of  Schedule Review,1607_31880,Perform,Perform - End of FEL 3 Schedule Review (bp),,1,,2,,,Not Started,\r\nyes,Project Services,End of  Review Comments,1607_31890,Incorporate,Incorporate - End of FEL 3 Review Comments,,6,,4,,,Not Started,\r\nyes,Project Services,End of  Schedule & Basis for Approval,1607_31920,Issue,Issue - End of FEL 3 Schedule & Basis for Approval,,0,,0,,,Not Started,\r\nyes,Project Services,End of  Schedule & Basis,1607_31930,Review,Review - End of FEL 3 Schedule & Basis,,5,,0,,,Not Started,\r\nyes,Project Services,End of  Schedule,1607_31960,Approved,Approved - End of FEL 3 Schedule,,0,,0,,,Not Started,\r\nyes,Engineering,DSP,1607_31950,Compile,Compile - FEL 3 DSP,,5,,5,,,Not Started,\r\nyes,Engineering,DSP to bp PM,1607_31980,Issue,Issue - FEL 3 DSP to bp PM,,0,,0,,,Not Started,\r\nyes,Engineering,bp PM  DSP Comments,1607_31990,Incorporate,Incorporate - bp PM FEL 3 DSP Comments,,2,,0,,,Not Started,\r\nyes,Engineering,DSP to bp Program Lead,1607_32000,Issue,Issue - FEL 3 DSP to bp Program Lead,,0,,0,,,Not Started,\r\nyes,Project Assurance,DSP by bp Program Lead,1607_32010,Review & Comment,Review & Comment - FEL 3 DSP by bp Program Lead,,7,,0,,,Not Started,\r\nyes,Engineering,Program Lead  DSP Comments,1607_32020,Incorporate,Incorporate - Program Lead FEL 3 DSP Comments,,2,,0,,,Not Started,\r\nyes,Engineering,DSP to bp Leadership,1607_32030,Issue,Issue - FEL 3 DSP to bp Leadership,,0,,0,,,Not Started,\r\nyes,Project Assurance,DSP by bp Leadership,1607_32040,Review,Review - FEL 3 DSP by bp Leadership,,10,,0,,,Not Started,\r\nyes,Engineering,DSP Sign-Off Meeting,1607_32050,Perform,Perform - FEL 3 DSP Sign-Off Meeting,,1,,0,,,Not Started,\r\nyes,PMAC,DSP,1607_32060,Approved,Approved - FEL 3 DSP,,0,,0,,,Not Started,\r\nyes,PMAC,AFC Funding,1607_32070,Receive,Receive - AFC Funding,,5,,0,,,Not Started,\r\n";</script>
+<script>
 /**
  * FEL-3 Analyzer Schedule Template Builder (v2.7)
  *
@@ -1907,3 +2780,7 @@
 
   init();
 })();
+
+</script>
+</body>
+</html>

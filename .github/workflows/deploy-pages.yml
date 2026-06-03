@@ -33,10 +33,12 @@ jobs:
       - name: Build Pages site bundle
         run: |
           mkdir -p _site
-          cp index.html .nojekyll _site/
+          cp index.html standalone.html .nojekyll _site/
           cp -r css js data _site/
           test -f _site/css/styles.css
           test -f _site/js/app.js
+          test -f _site/data/activities.csv
+          test -f _site/standalone.html
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3

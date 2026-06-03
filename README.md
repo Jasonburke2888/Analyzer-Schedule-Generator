@@ -11,6 +11,21 @@ python3 -m http.server 8080
 
 Open [http://localhost:8080](http://localhost:8080)
 
+## GitHub Pages (static deployment)
+
+No build step required. Push to `main`; GitHub Actions deploys:
+
+- [index.html](index.html) — main entry (relative `./css/styles.css`, `./js/app.js`, `data/activities.csv`)
+- [standalone.html](standalone.html) — single-file offline bundle (double-click or email)
+
+Live URL: [https://jasonburke2888.github.io/Analyzer-Schedule-Generator/](https://jasonburke2888.github.io/Analyzer-Schedule-Generator/)
+
+Regenerate standalone after edits:
+
+```bash
+node scripts/build-standalone.js
+```
+
 ## v2.7 highlights
 
 - **Schedule-builder focus** — two compact toolbar rows; project admin (New/Clone/Delete) in Manage Lists → Projects only
