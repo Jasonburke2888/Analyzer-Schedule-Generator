@@ -47,7 +47,10 @@
         </label>
         <button type="button" id="btn-undo" class="btn btn-secondary btn-compact" title="Undo (⌘Z)" disabled>Undo</button>
         <button type="button" id="btn-redo" class="btn btn-secondary btn-compact" title="Redo (⌘⇧Z)" disabled>Redo</button>
-        <button type="button" id="btn-save" class="btn btn-compact">Save</button>
+        <button type="button" id="btn-save-project" class="btn btn-compact" title="Download project JSON file">Save Project</button>
+        <button type="button" id="btn-load-project" class="btn btn-secondary btn-compact" title="Open a saved project JSON file">Load Project</button>
+        <button type="button" id="btn-new-template" class="btn btn-secondary btn-compact" title="Start from default template">New from Template</button>
+        <input type="file" id="project-file-input" accept=".json,application/json" hidden>
       </div>
       <div class="compact-row row-actions">
         <div class="filter-group-left">

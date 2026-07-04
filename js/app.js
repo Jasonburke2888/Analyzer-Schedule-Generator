@@ -1,20 +1,8 @@
 /**
- * FEL-3 Analyzer Schedule Template Builder (v2.7)
+ * FEL-3 Analyzer Schedule Generator (v2.8)
  *
- * RENDER / EDIT / SAVE FLOW
- * -------------------------
- * 1. INIT — Load from localStorage or data/activities.csv; seed default lists;
- *    renderTable() once.
- * 2. EDIT — Event delegation on #schedule-table; no full re-render on keypress.
- *    Selects (discipline, deliverable, owner) sync on change; text fields on blur.
- * 3. FILTER — CSS row-hidden only; focus preserved.
- * 4. STRUCTURAL — add/delete/duplicate/reset call renderTable().
- * 5. SAVE — activities, lists, project metadata, gridZoom → localStorage.
- * 6. LISTS — Manage Lists modal (tabs) for projects/disciplines/deliverables;
- *    inline "+ Add ..." in grid dropdowns; refreshListDropdowns() updates selects
- *    without rebuilding the table.
- * 7. UNDO — Snapshot stack (50 levels) for grid edits; Cmd+Z / Cmd+Shift+Z.
- * 8. ZOOM — Grid-only zoom (100–175%) via CSS --grid-zoom on Activity Builder panel.
+ * PROJECT FILE — primary storage is portable JSON (Save Project / Load Project).
+ * localStorage is autosave / recovery cache only.
  */
 
 (function () {
@@ -22,6 +10,9 @@
 
   const STORAGE_KEY = 'fel3-analyzer-schedule-generator-v4';
   const STORAGE_KEY_LEGACY = 'fel3-analyzer-schedule-generator-v3';
+  const PROJECT_FILE_FORMAT = 'analyzer-schedule-project';
+  const PROJECT_FILE_VERSION = 1;
+  const APP_VERSION = 'v2.8';
   const CSV_PATH = new URL('data/activities.csv', window.location.href).href;
 
   const ADD_DISCIPLINE = '__add_discipline__';
@@ -654,6 +645,7 @@
   function saveToStorage() {
     persistCurrentProject();
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      cacheRole: 'autosave',
       nextInternalId: nextInternalId,
       projectsData: projectsData,
       currentProjectName: currentProjectName,
@@ -662,6 +654,189 @@
       gridZoom: gridZoom,
       savedAt: new Date().toISOString(),
     }));
+  }
+
+  function buildProjectFilePayload() {
+    persistCurrentProject();
+    return {
+      format: PROJECT_FILE_FORMAT,
+      formatVersion: PROJECT_FILE_VERSION,
+      appVersion: APP_VERSION,
+      savedAt: new Date().toISOString(),
+      savedBy: '',
+      projectId: projectSettings.id || '',
+      projectName: projectSettings.name || currentProjectName || '',
+      client: projectSettings.client || '',
+      felStage: projectSettings.felStage || 'FEL-3',
+      pm: projectSettings.pm || 'Unassigned',
+      activities: JSON.parse(JSON.stringify(activities)),
+      lists: JSON.parse(JSON.stringify(lists)),
+      columnWidths: Object.assign({}, columnWidths),
+      gridZoom: gridZoom,
+      nextInternalId: nextInternalId,
+    };
+  }
+
+  function validateProjectFile(data) {
+    if (!data || typeof data !== 'object') return 'File is not a valid JSON object.';
+    if (data.format !== PROJECT_FILE_FORMAT) {
+      return 'Unrecognized project format (expected "' + PROJECT_FILE_FORMAT + '").';
+    }
+    if (data.formatVersion !== PROJECT_FILE_VERSION) {
+      return 'Unsupported format version (expected ' + PROJECT_FILE_VERSION + ').';
+    }
+    if (!Array.isArray(data.activities)) return 'Missing or invalid activities array.';
+    if (!data.activities.length) return 'Project file contains no activities.';
+    if (typeof data.projectName !== 'string' || !data.projectName.trim()) {
+      return 'Missing projectName.';
+    }
+    if (data.felStage != null && data.felStage !== '' && FEL_STAGES.indexOf(data.felStage) < 0) {
+      return 'Invalid felStage: ' + data.felStage;
+    }
+    if (data.lists != null && typeof data.lists !== 'object') return 'Invalid lists object.';
+    return null;
+  }
+
+  function applyProjectFile(data) {
+    clearUndoRedo();
+    nextInternalId = data.nextInternalId || 1;
+    activities = data.activities.map(rehydrateActivity);
+    activities.forEach(function (a) {
+      a.activityId = stripActivityIdPrefix(a.activityId);
+      if (a._id >= nextInternalId) nextInternalId = a._id + 1;
+    });
+    migrateAllActivityNaming();
+
+    if (data.lists && typeof data.lists === 'object') {
+      lists = {
+        projects: Array.isArray(data.lists.projects) ? data.lists.projects.slice() : [],
+        projectIds: Array.isArray(data.lists.projectIds) ? data.lists.projectIds.slice() : [],
+        disciplines: Array.isArray(data.lists.disciplines) ? data.lists.disciplines.slice() : [],
+        deliverables: Array.isArray(data.lists.deliverables) ? data.lists.deliverables.slice() : [],
+        actions: Array.isArray(data.lists.actions) ? data.lists.actions.slice() : [],
+        pms: Array.isArray(data.lists.pms) ? data.lists.pms.slice() : [],
+        activityOwners: Array.isArray(data.lists.activityOwners) ? data.lists.activityOwners.slice() : [],
+      };
+    }
+    ensureDefaultLists();
+    mergeListsFromActivities(activities);
+
+    const name = data.projectName.trim();
+    currentProjectName = name;
+    projectSettings = {
+      name: name,
+      id: data.projectId != null ? String(data.projectId) : '',
+      client: data.client || '',
+      felStage: data.felStage || 'FEL-3',
+      pm: data.pm || 'Unassigned',
+    };
+    if (!lists.projects.includes(name)) addToList('projects', name);
+    if (projectSettings.id && !lists.projectIds.includes(projectSettings.id)) {
+      addToList('projectIds', projectSettings.id);
+    }
+
+    projectsData = {};
+    projectsData[name] = {
+      activities: activities,
+      settings: Object.assign({}, projectSettings),
+    };
+
+    if (data.columnWidths && typeof data.columnWidths === 'object') {
+      columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS, data.columnWidths);
+    }
+    if (GRID_ZOOM_OPTIONS.indexOf(data.gridZoom) >= 0) {
+      gridZoom = data.gridZoom;
+    }
+
+    syncProjectSetupUI();
+    applyGridZoom();
+    renderTable();
+    saveToStorage();
+  }
+
+  function projectFileName(payload) {
+    const pid = (payload.projectId || 'project').replace(/[^\w.-]+/g, '_');
+    const safeName = (payload.projectName || 'schedule').replace(/[^\w.-]+/g, '_').slice(0, 48);
+    return pid + '_' + safeName + '.json';
+  }
+
+  function saveProjectToFile() {
+    const payload = buildProjectFilePayload();
+    const filename = projectFileName(payload);
+    downloadFile(filename, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8;');
+    saveToStorage();
+    showStatus('Project saved to ' + filename + ' (portable JSON).');
+  }
+
+  function openLoadProjectDialog() {
+    const input = document.getElementById('project-file-input');
+    if (input) input.click();
+  }
+
+  function handleProjectFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const err = validateProjectFile(parsed);
+        if (err) {
+          showStatus('Invalid project file: ' + err, true);
+          return;
+        }
+        if (activities.length && !window.confirm(
+          'Load project from "' + file.name + '"? Unsaved changes in this session should be saved as a JSON project file first.'
+        )) return;
+        applyProjectFile(parsed);
+        showStatus('Loaded project from ' + file.name + '.');
+      } catch {
+        showStatus('Could not read project file: invalid JSON.', true);
+      }
+    };
+    reader.onerror = function () {
+      showStatus('Could not read project file.', true);
+    };
+    reader.readAsText(file);
+  }
+
+  async function newProjectFromTemplate(skipConfirm) {
+    if (!skipConfirm && activities.length && !window.confirm(
+      'Start a new project from the default template? Save your current work as a JSON project file first if needed.'
+    )) return;
+    try {
+      clearUndoRedo();
+      nextInternalId = 1;
+      columnWidths = Object.assign({}, DEFAULT_COLUMN_WIDTHS);
+      gridZoom = DEFAULT_GRID_ZOOM;
+      ensureDefaultLists();
+      projectSettings = {
+        name: DEFAULT_PROJECTS[0],
+        id: lists.projectIds[0] || DEFAULT_PROJECT_IDS[0] || '',
+        client: '',
+        felStage: 'FEL-3',
+        pm: 'Unassigned',
+      };
+      activities = await loadFromCsv();
+      migrateAllActivityNaming();
+      mergeListsFromActivities(activities);
+      currentProjectName = projectSettings.name;
+      lists.projects = [currentProjectName];
+      projectsData = {
+        [currentProjectName]: {
+          activities: activities,
+          settings: Object.assign({}, projectSettings),
+        },
+      };
+      syncProjectSetupUI();
+      applyGridZoom();
+      renderTable();
+      saveToStorage();
+      showStatus('New project started from default template (' + activities.length + ' activities).');
+    } catch (err) {
+      showStatus(err.message, true);
+    }
   }
 
   function applyGridZoom() {
@@ -1726,8 +1901,8 @@
     return /[",\n\r]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
   }
 
-  function downloadFile(filename, content) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  function downloadFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType || 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -1834,10 +2009,12 @@
     deletePasswordModal.addEventListener('click', function (event) {
       if (event.target.dataset.action === 'cancel-delete') closeDeletePasswordModal();
     });
-    document.getElementById('btn-save').addEventListener('click', function () {
-      saveToStorage();
-      showStatus('Schedule saved to browser storage.');
+    document.getElementById('btn-save-project').addEventListener('click', saveProjectToFile);
+    document.getElementById('btn-load-project').addEventListener('click', openLoadProjectDialog);
+    document.getElementById('btn-new-template').addEventListener('click', function () {
+      newProjectFromTemplate(false);
     });
+    document.getElementById('project-file-input').addEventListener('change', handleProjectFileSelect);
     document.getElementById('btn-reset').addEventListener('click', resetToTemplate);
     document.getElementById('btn-export').addEventListener('click', exportIncludedCsv);
     document.getElementById('btn-manage-lists').addEventListener('click', openManageListsModal);
@@ -1871,33 +2048,22 @@
     });
 
     const stored = loadFromStorage();
+    let useRecovery = false;
     if (stored && stored.length) {
+      useRecovery = window.confirm(
+        'Recover unsaved work from browser autosave cache?\n\nOK = recover cache\nCancel = start from default template (or use Load Project for a saved JSON file)'
+      );
+    }
+    if (useRecovery) {
       activities = stored;
       migrateAllActivityNaming();
       activities.forEach(function (a) { if (a._id >= nextInternalId) nextInternalId = a._id + 1; });
       mergeListsFromActivities(activities);
       syncProjectSetupUI();
       renderTable();
-      showStatus('Loaded saved schedule from browser storage.');
+      showStatus('Recovered session from browser autosave cache. Save Project to export a portable JSON file.');
     } else {
-      ensureDefaultLists();
-      try {
-        activities = await loadFromCsv();
-        migrateAllActivityNaming();
-        mergeListsFromActivities(activities);
-        currentProjectName = projectSettings.name || lists.projects[0];
-        projectSettings.name = currentProjectName;
-        projectsData[currentProjectName] = {
-          activities: activities,
-          settings: Object.assign({}, projectSettings),
-        };
-        syncProjectSetupUI();
-        renderTable();
-        saveToStorage();
-        showStatus('Loaded ' + activities.length + ' activities from data/activities.csv.');
-      } catch (err) {
-        showStatus(err.message + ' See README.', true);
-      }
+      await newProjectFromTemplate(true);
     }
     applyGridZoom();
     updateUndoRedoButtons();

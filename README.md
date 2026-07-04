@@ -1,4 +1,38 @@
-# FEL-3 Analyzer Schedule Generator (v2.2)
+# FEL-3 Analyzer Schedule Generator (v2.8)
+
+Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages.
+
+## v2.8 highlights
+
+- **Portable project JSON** — Save Project / Load Project (primary storage for shared discipline work)
+- **New from Template** — start from `data/activities.csv` without relying on browser cache
+- **localStorage** — autosave / recovery cache only (prompted on startup)
+- Project file metadata: `projectId`, `client`, `felStage`, `savedAt`, `appVersion`, `savedBy`
+- Import validation with clear error messages for invalid JSON
+
+### Project JSON format
+
+```json
+{
+  "format": "analyzer-schedule-project",
+  "formatVersion": 1,
+  "appVersion": "v2.8",
+  "savedAt": "2026-06-03T12:00:00.000Z",
+  "savedBy": "",
+  "projectId": "1517",
+  "projectName": "FEL-3 Analyzer Template",
+  "client": "",
+  "felStage": "FEL-3",
+  "pm": "Unassigned",
+  "activities": [],
+  "lists": {},
+  "columnWidths": {},
+  "gridZoom": 125,
+  "nextInternalId": 1
+}
+```
+
+Designed for SharePoint project folders: save the `.json` file alongside project documents.
 
 Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages.
 
