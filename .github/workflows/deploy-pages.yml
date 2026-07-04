@@ -46,6 +46,7 @@ jobs:
           test -f _site/app/shared/excel-reader.js
           test -f _site/app/estimate-import/workbook-reader.js
           test -f _site/app/estimate-import/workbook-reader-ui.js
+          test -f _site/app/estimate-import/eichleay-template-detector.js
           test -f _site/app/estimate-import/template-detector.js
           test -f _site/app/estimate-import/import-wizard.js
           test -f _site/app/estimate-import/eichleay-pse-old-parser.js

@@ -35,6 +35,9 @@
     var headersPanel = document.getElementById('column-headers-panel');
     var previewWrap = document.getElementById('preview-table-wrap');
     var previewMeta = document.getElementById('preview-meta');
+    var templateDetectionPanel = document.getElementById('template-detection-result');
+
+    var EichleayDetector = NS.EichleayTemplateDetector;
 
     if (!chooseBtn || !fileInput) {
       throw new Error('Workbook Reader UI: required elements missing on import.html');
@@ -82,7 +85,77 @@
       });
     }
 
-    function renderHeaders(preview) {
+    function renderTemplateDetection(result) {
+      if (!templateDetectionPanel) return;
+      if (!result) {
+        templateDetectionPanel.innerHTML = '<p class="import-panel-empty">Open a workbook to run template detection.</p>';
+        return;
+      }
+
+      var nameText = result.templateName
+        ? escapeHtml(result.templateName)
+        : '<span class="import-detect-none">Not matched</span>';
+      var matchClass = result.isMatch ? 'import-detect-match' : 'import-detect-nomatch';
+
+      templateDetectionPanel.innerHTML = ''
+        + '<dl class="import-dl import-detect-summary ' + matchClass + '">'
+        + '<dt>Template</dt><dd>' + nameText + '</dd>'
+        + '<dt>Version</dt><dd>' + escapeHtml(result.templateVersion) + '</dd>'
+        + '<dt>Confidence</dt><dd>' + result.confidenceScore + '%</dd>'
+        + '</dl>'
+        + '<div class="import-signal-columns">'
+        + '<div class="import-signal-col">'
+        + '<h4>Matched signals (' + result.matchedSignals.length + ')</h4>'
+        + signalList(result.matchedSignals, 'import-signal-ok')
+        + '</div>'
+        + '<div class="import-signal-col">'
+        + '<h4>Missing signals (' + result.missingSignals.length + ')</h4>'
+        + signalList(result.missingSignals, 'import-signal-miss')
+        + '</div>'
+        + '</div>';
+    }
+
+    function signalList(items, itemClass) {
+      if (!items.length) {
+        return '<p class="import-panel-empty">None</p>';
+      }
+      return '<ul class="import-signal-list">'
+        + items.map(function (item) {
+          return '<li class="' + itemClass + '">' + escapeHtml(item) + '</li>';
+        }).join('')
+        + '</ul>';
+    }
+
+    function runTemplateDetection() {
+      if (!session || !EichleayDetector) {
+        renderTemplateDetection(null);
+        if (!EichleayDetector) log('EichleayTemplateDetector not loaded.');
+        return null;
+      }
+      var result = EichleayDetector.detectEichleayPse(session);
+      renderTemplateDetection(result);
+      if (result.isMatch) {
+        setStatus([
+          '✓ Page Loaded',
+          '✓ Workbook Opened',
+          '✓ Eichleay PSE detected (' + result.confidenceScore + '%)',
+        ]);
+        log('Template detected: ' + result.templateName + ' v' + result.templateVersion
+          + ' (' + result.confidenceScore + '% confidence).');
+      } else {
+        setStatus([
+          '✓ Page Loaded',
+          '✓ Workbook Opened',
+          '○ Template not matched (' + result.confidenceScore + '% confidence)',
+        ]);
+        log('Template not matched — confidence ' + result.confidenceScore + '%.');
+      }
+      log('Matched signals: ' + result.matchedSignals.length
+        + '; missing: ' + result.missingSignals.length);
+      if (hooks.onTemplateDetection) hooks.onTemplateDetection(result, session);
+      return result;
+    }
+
       if (!headersPanel) return;
       if (!preview.headers.length) {
         headersPanel.innerHTML = '<p class="import-panel-empty">No column headers detected in the first '
@@ -177,14 +250,16 @@
         setStatus([
           '✓ Page Loaded',
           '✓ Workbook Opened',
-          '✓ Ready for Template Detection (Sprint 2)',
+          EichleayDetector ? '✓ Template Detection Ready' : '⏳ Template Detection module loading',
         ]);
         log('Workbook opened: ' + info.name + ' (' + info.sheetCount + ' sheet(s))');
+        runTemplateDetection();
         if (hooks.onSessionChange) hooks.onSessionChange(session);
         if (hooks.onSheetPreview) hooks.onSheetPreview(preview, session);
       }).catch(function (err) {
         session = null;
         WorkbookReader.clearSession();
+        renderTemplateDetection(null);
         fileLabel.textContent = 'No file selected';
         setStatus(['✓ Page Loaded', '✗ ' + (err.message || 'Workbook read failed')]);
         log('Error: ' + (err.message || String(err)));

@@ -17,7 +17,7 @@
     <a class="import-nav-link" href="./index.html">← Back to Schedule Builder</a>
 
     <section class="import-hero" aria-label="Import engine status">
-      <h2>Estimate Import Engine V3 — Sprint 1: Workbook Reader</h2>
+      <h2>Estimate Import Engine V3 — Sprint 2: Template Detection</h2>
       <ul class="import-status-list" id="import-engine-status">
         <li>✓ Page Loaded</li>
         <li>✓ Ready for Excel Import</li>
@@ -44,6 +44,13 @@
       </div>
     </section>
 
+    <section class="import-panel" aria-label="Template detection">
+      <h3>Template Detection</h3>
+      <div id="template-detection-result">
+        <p class="import-panel-empty">Open a workbook to detect Eichleay PSE template.</p>
+      </div>
+    </section>
+
     <section class="import-panel" aria-label="Column headers">
       <h3>Detected Column Headers</h3>
       <div id="column-headers-panel">
@@ -61,7 +68,7 @@
 
     <section class="import-panel" aria-label="Mapping review">
       <h3>Mapping Review</h3>
-      <p class="import-panel-empty" id="mapping-review-panel">Not started — parsing and mapping are Sprint 2+.</p>
+      <p class="import-panel-empty" id="mapping-review-panel">Not started — hour parsing and mapping are Sprint 3+.</p>
     </section>
 
     <section class="import-panel" aria-label="Console log">
@@ -74,6 +81,7 @@
   <script src="./app/shared/standard-import-schema.js"></script>
   <script src="./app/shared/excel-reader.js"></script>
   <script src="./app/estimate-import/workbook-reader.js"></script>
+  <script src="./app/estimate-import/eichleay-template-detector.js"></script>
   <script src="./app/estimate-import/workbook-reader-ui.js"></script>
   <script src="./app/estimate-import/template-manager.js"></script>
   <script src="./app/estimate-import/template-detector.js"></script>
@@ -92,12 +100,15 @@
       }
 
       document.addEventListener('DOMContentLoaded', function () {
-        log('Sprint 1 — Workbook Reader initialized.');
-        log('Modules: ExcelReader, WorkbookReader (no parsing yet).');
+        log('Sprint 2 — Workbook Reader + Eichleay Template Detection initialized.');
+        log('No hour parsing or schedule activities in this sprint.');
         AnalyzerSchedule.WorkbookReaderUI.mount({
           onLog: log,
-          onSessionChange: function (session) {
-            log('Session ready for Template Detection — ' + session.sheetNames.length + ' sheet(s).');
+          onTemplateDetection: function (result) {
+            if (result.isMatch) {
+              log('Ready for Mapping Wizard (Sprint 3) — template locked: '
+                + result.templateName + ' / ' + result.templateVersion);
+            }
           },
         });
       });
