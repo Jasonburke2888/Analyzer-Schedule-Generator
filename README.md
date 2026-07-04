@@ -34,6 +34,16 @@ Interactive schedule builder for discipline leads — plain HTML, CSS, and vanil
 
 Designed for SharePoint project folders: save the `.json` file alongside project documents.
 
+## Developer status dashboard
+
+Generate a markdown snapshot for ChatGPT handoff (no screenshots):
+
+```bash
+python3 scripts/project_status.py
+```
+
+Writes [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md). See [docs/developer-status-dashboard.md](docs/developer-status-dashboard.md).
+
 Interactive schedule builder for discipline leads — plain HTML, CSS, and vanilla JavaScript. Deployed via GitHub Pages.
 
 ## Run locally
