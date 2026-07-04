@@ -33,13 +33,20 @@ jobs:
       - name: Build Pages site bundle
         run: |
           mkdir -p _site
-          cp index.html standalone.html .nojekyll _site/
+          cp index.html import.html standalone.html .nojekyll _site/
           cp -r css js data app _site/
           test -f _site/css/styles.css
+          test -f _site/css/import-wizard.css
           test -f _site/js/app.js
+          test -f _site/import.html
           test -f _site/data/activities.csv
+          test -f _site/data/fixtures/1830-pse-sample.xlsx
           test -f _site/standalone.html
           test -f _site/app/shared/standard-import-schema.js
+          test -f _site/app/shared/excel-reader.js
+          test -f _site/app/estimate-import/template-detector.js
+          test -f _site/app/estimate-import/import-wizard.js
+          test -f _site/app/estimate-import/eichleay-pse-old-parser.js
           test -f _site/app/database/schema.js
           test -f _site/app/database/project-db.js
 

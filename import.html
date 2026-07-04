@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimate Import Test — FEL-3 Analyzer Schedule Generator</title>
+  <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/import-wizard.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>FEL-3 Analyzer Schedule Generator v2.2</h1>
+    <p class="app-header-meta">Version: v2.2 · Last Updated: 2026-06-02</p>
+  </header>
+
+  <div class="app-shell import-shell">
+    <a class="import-nav-link" href="./index.html">← Back to Schedule Builder</a>
+
+    <section class="import-hero" aria-label="Import engine status">
+      <h2>Estimate Import Engine V3</h2>
+      <ul class="import-status-list" id="import-engine-status">
+        <li>✓ Page Loaded</li>
+        <li>✓ Ready for Excel Import</li>
+      </ul>
+    </section>
+
+    <section class="import-toolbar" aria-label="Import actions">
+      <button type="button" id="btn-choose-excel" class="btn">Choose Excel File</button>
+      <input type="file" id="excel-file-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+      <span class="import-file-label" id="selected-file-label">No file selected</span>
+    </section>
+
+    <section class="import-panel" aria-label="Import summary">
+      <h3>Import Summary</h3>
+      <p class="import-panel-empty" id="import-summary-panel">No import data yet.</p>
+    </section>
+
+    <section class="import-panel" aria-label="Mapping review">
+      <h3>Mapping Review</h3>
+      <p class="import-panel-empty" id="mapping-review-panel">No rows to review.</p>
+    </section>
+
+    <section class="import-panel" aria-label="Console log">
+      <h3>Console Log</h3>
+      <pre id="import-console-log"></pre>
+    </section>
+  </div>
+
+  <!-- V3 modules wired for import test page (parsing not implemented yet) -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="./app/shared/standard-import-schema.js"></script>
+  <script src="./app/shared/excel-reader.js"></script>
+  <script src="./app/estimate-import/template-manager.js"></script>
+  <script src="./app/estimate-import/template-detector.js"></script>
+  <script src="./app/estimate-import/eichleay-pse-old-parser.js"></script>
+  <script src="./app/estimate-import/import-review.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var logEl = document.getElementById('import-console-log');
+      var fileLabel = document.getElementById('selected-file-label');
+      var chooseBtn = document.getElementById('btn-choose-excel');
+      var fileInput = document.getElementById('excel-file-input');
+
+      function log(message) {
+        var line = new Date().toISOString().slice(11, 19) + '  ' + message;
+        logEl.textContent = logEl.textContent ? logEl.textContent + '\n' + line : line;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function logModuleStatus() {
+        var AS = window.AnalyzerSchedule || {};
+        var modules = [
+          ['StandardImportSchema', AS.StandardImportSchema],
+          ['ExcelReader', AS.ExcelReader],
+          ['TemplateManager', AS.TemplateManager],
+          ['TemplateDetector', AS.TemplateDetector],
+          ['EichleayPseOldParser', AS.EichleayPseOldParser],
+          ['ImportReview', AS.ImportReview],
+        ];
+        modules.forEach(function (entry) {
+          log((entry[1] ? '✓' : '✗') + ' ' + entry[0] + (entry[1] ? ' loaded' : ' missing'));
+        });
+        if (window.XLSX) {
+          log('✓ SheetJS loaded');
+        } else {
+          log('✗ SheetJS missing');
+        }
+        var parsers = AS.TemplateManager ? AS.TemplateManager.listTemplateParsers() : [];
+        log('Registered parsers: ' + parsers.map(function (p) { return p.id; }).join(', ') || '(none)');
+        log('Parsing not implemented on this page yet.');
+      }
+
+      chooseBtn.addEventListener('click', function () {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          fileLabel.textContent = 'No file selected';
+          return;
+        }
+        fileLabel.textContent = file.name;
+        log('File selected: ' + file.name + ' (' + file.size + ' bytes) — parse pending');
+      });
+
+      document.addEventListener('DOMContentLoaded', function () {
+        log('Estimate Import Test page initialized.');
+        logModuleStatus();
+      });
+    })();
+  </script>
+</body>
+</html>

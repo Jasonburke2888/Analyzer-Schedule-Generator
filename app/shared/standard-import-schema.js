@@ -24,7 +24,11 @@
     'projectId',
     'sourceFile',
     'templateName',
+    'templateVersion',
+    'sheetName',
+    'rowNumber',
     'discipline',
+    'estimateDeliverable',
     'deliverable',
     'activityName',
     'qty',
@@ -38,6 +42,7 @@
   ];
 
   var NUMERIC_FIELDS = [
+    'rowNumber',
     'qty',
     'engineerHours',
     'designerHours',
@@ -61,7 +66,11 @@
       projectId: '',
       sourceFile: '',
       templateName: '',
+      templateVersion: '',
+      sheetName: '',
+      rowNumber: 0,
       discipline: '',
+      estimateDeliverable: '',
       deliverable: '',
       activityName: '',
       qty: 0,
@@ -81,6 +90,12 @@
           : String(overrides[key] == null ? '' : overrides[key]).trim();
       }
     });
+    if (!base.estimateDeliverable && base.deliverable) {
+      base.estimateDeliverable = base.deliverable;
+    }
+    if (!base.deliverable && base.estimateDeliverable) {
+      base.deliverable = base.estimateDeliverable;
+    }
     if (!base.totalHours && (base.engineerHours || base.designerHours || base.checkerHours || base.pmHours)) {
       base.totalHours = base.engineerHours + base.designerHours + base.checkerHours + base.pmHours;
     }
@@ -138,6 +153,7 @@
       projectId: (meta && meta.projectId) || '',
       sourceFile: (meta && meta.sourceFile) || '',
       templateName: (meta && meta.templateName) || '',
+      templateVersion: (meta && meta.templateVersion) || '',
       rows: (rows || []).map(function (r) { return createStandardImportRow(r); }),
     };
     var err = validateStandardImportBatch(batch);

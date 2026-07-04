@@ -99,8 +99,18 @@
     return summary;
   }
 
+  /**
+   * Accept batch into review — stores rows only; does NOT generate schedule activities.
+   * @param {StandardImportBatch} batch
+   * @returns {ImportReviewState}
+   */
+  function acceptImportForReview(batch) {
+    return createReviewState(batch);
+  }
+
   NS.ImportReview = {
     createReviewState: createReviewState,
+    acceptImportForReview: acceptImportForReview,
     updateReviewRow: updateReviewRow,
     getRowsReadyForLoader: getRowsReadyForLoader,
     summarizeReview: summarizeReview,
