@@ -34,11 +34,14 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html standalone.html .nojekyll _site/
-          cp -r css js data _site/
+          cp -r css js data app _site/
           test -f _site/css/styles.css
           test -f _site/js/app.js
           test -f _site/data/activities.csv
           test -f _site/standalone.html
+          test -f _site/app/shared/standard-import-schema.js
+          test -f _site/app/database/schema.js
+          test -f _site/app/database/project-db.js
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
