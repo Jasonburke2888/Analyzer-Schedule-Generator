@@ -70,7 +70,7 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px 12px;
-  min-height: 80px;
+  min-height: 60px;
 }
 
 .import-panel h3 {
@@ -87,6 +87,131 @@
   font-style: italic;
 }
 
+.import-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+}
+
+.import-dl dt {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.import-dl dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.import-sheet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.import-sheet-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #f6f8fb;
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.import-sheet-btn:hover {
+  border-color: var(--blue2);
+}
+
+.import-sheet-btn.is-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.import-headers-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.import-header-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.import-header-list li {
+  background: #f0f4fa;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.import-header-col {
+  color: var(--muted);
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.import-preview-meta {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.import-preview-wrap {
+  overflow: auto;
+  max-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.import-preview-table th,
+.import-preview-table td {
+  border: 1px solid #e8edf5;
+  padding: 3px 6px;
+  text-align: left;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-preview-table th {
+  position: sticky;
+  top: 0;
+  background: #f0f4fa;
+  z-index: 1;
+  font-weight: 700;
+}
+
+.import-preview-table tr.import-header-row td {
+  background: #fffbeb;
+  font-weight: 600;
+}
+
+.import-preview-table .import-row-num {
+  background: #f6f8fb;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: right;
+  min-width: 28px;
+}
+
 #import-console-log {
   margin: 0;
   padding: 8px;
@@ -96,8 +221,8 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   line-height: 1.45;
-  min-height: 100px;
-  max-height: 200px;
+  min-height: 80px;
+  max-height: 160px;
   overflow: auto;
   white-space: pre-wrap;
 }
