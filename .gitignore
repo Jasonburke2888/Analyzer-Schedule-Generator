@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+# Cursor
+.cursor/
+# Python
+__pycache__/
+*.pyc
+# Logs
+*.log
