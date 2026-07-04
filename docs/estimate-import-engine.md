@@ -20,7 +20,10 @@ Estimate Excel
 |------|------|
 | `app/shared/standard-import-schema.js` | Canonical row/batch shape, validation, factories |
 | `app/estimate-import/template-manager.js` | Register and dispatch template parsers |
-| `app/estimate-import/eichleay-pse-old-parser.js` | Stub parser for legacy Eichleay PSE Excel |
+| `app/shared/excel-reader.js` | SheetJS wrapper for workbook read |
+| `app/estimate-import/template-detector.js` | Fingerprint workbook → template id/version |
+| `app/estimate-import/import-wizard.js` | File pick → detect → parse → Import Review UI |
+| `app/estimate-import/eichleay-pse-old-parser.js` | Eichleay PSE v1 Excel parser |
 | `app/estimate-import/import-review.js` | Review state, row updates, readiness for loader |
 | `app/resource-loader/resource-loader.js` | Standard rows → schedule activity candidates |
 | `app/database/schema.js` | V3 logical table definitions and record factories |
@@ -72,6 +75,7 @@ Batch wrapper (`createStandardImportBatch`):
 ```html
 <script src="./app/shared/standard-import-schema.js"></script>
 <script src="./app/estimate-import/template-manager.js"></script>
+<script src="./app/estimate-import/template-detector.js"></script>
 <script src="./app/estimate-import/eichleay-pse-old-parser.js"></script>
 <script src="./app/estimate-import/import-review.js"></script>
 <script src="./app/resource-loader/resource-loader.js"></script>
@@ -96,16 +100,24 @@ AnalyzerSchedule.TemplateManager.parseWithTemplate('eichleay-pse-old', {
 });
 ```
 
-## V3.0 scope (this release)
+## V3.1 scope (1830 import workflow)
 
-- [x] Standard schema and validation
-- [x] Template registry and stub Eichleay PSE parser
-- [x] Import review helpers (no UI)
-- [x] Resource loader → activity **candidates** (no merge into grid)
-- [ ] Excel binary parsing (SheetJS or server-side — TBD)
-- [ ] Mapping Review UI
+- [x] Excel read via SheetJS on `import.html` only
+- [x] Template detection (`template-detector.js`)
+- [x] Eichleay PSE v1 parser (real row extraction)
+- [x] Import wizard UI + Import Review (no schedule merge)
+- [ ] Mapping Review UI in main app
 - [ ] Apply candidates to `js/app.js` activities
 - [ ] P6-specific export from imported resources
+
+See [1830-import-workflow.md](./1830-import-workflow.md).
+
+## V3.0 scope (skeleton)
+
+- [x] Standard schema and validation
+- [x] Template registry
+- [x] Import review helpers
+- [x] Resource loader → activity **candidates** (no merge into grid)
 
 ## SharePoint / project files
 
