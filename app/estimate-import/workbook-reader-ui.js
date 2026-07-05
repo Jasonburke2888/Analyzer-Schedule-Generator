@@ -160,6 +160,26 @@
       return result;
     }
 
+    var LINE_ITEMS_DISPLAY_LIMIT = 25;
+
+    function isCivilStrActive(sheetName) {
+      return CivilStrExtractor && CivilStrExtractor.isCivilStrSheetName(sheetName);
+    }
+
+    function renderMainReviewForSheet(sheetName, extraction) {
+      if (isCivilStrActive(sheetName)) {
+        renderEstimateLineItems(extraction);
+        return;
+      }
+      if (importReviewSummary) {
+        importReviewSummary.textContent = '';
+        importReviewSummary.classList.remove('import-qa-warning');
+      }
+      if (importReviewPanel) {
+        importReviewPanel.innerHTML = '<p class="import-panel-empty">'
+          + escapeHtml(emptyLineItemsMessage(sheetName)) + '</p>';
+      }
+    }
     function emptyLineItemsMessage(sheetName) {
       if (CivilStrExtractor && CivilStrExtractor.isCivilStrSheetName(sheetName)) {
         return 'No Civil/Structural line items extracted yet.';
@@ -169,15 +189,11 @@
 
     function runLineItemExtractionForSheet(sheetName, detection) {
       if (!session || !sheetName) {
-        renderEstimateLineItems(null);
+        renderMainReviewForSheet(sheetName, null);
         return;
       }
-      if (!CivilStrExtractor || !CivilStrExtractor.isCivilStrSheetName(sheetName)) {
-        renderEstimateLineItems(null);
-        if (importReviewPanel) {
-          importReviewPanel.innerHTML = '<p class="import-panel-empty">'
-            + escapeHtml(emptyLineItemsMessage(sheetName)) + '</p>';
-        }
+      if (!isCivilStrActive(sheetName)) {
+        renderMainReviewForSheet(sheetName, null);
         return;
       }
       runCivilStrExtraction(detection);
@@ -194,8 +210,10 @@
         return;
       }
 
+      var allItems = extraction.items;
+      var displayItems = allItems.slice(0, LINE_ITEMS_DISPLAY_LIMIT);
       var summary = LineItemSchema
-        ? LineItemSchema.summarizeValidation(extraction.items)
+        ? LineItemSchema.summarizeValidation(allItems)
         : { total: extraction.rowCount, valid: 0, needs_review: extraction.needsReviewCount };
 
       if (importReviewSummary) {
@@ -203,6 +221,9 @@
           + ' · Line items: ' + summary.total
           + ' · Valid: ' + summary.valid
           + ' · Needs review: ' + summary.needs_review;
+        if (allItems.length > LINE_ITEMS_DISPLAY_LIMIT) {
+          summaryText += ' · Showing first ' + LINE_ITEMS_DISPLAY_LIMIT + ' of ' + allItems.length;
+        }
         if (extraction.qaWarning) {
           summaryText += ' · ⚠ ' + extraction.qaWarning;
         }
@@ -211,16 +232,15 @@
       }
 
       var thead = '<thead><tr>'
-        + '<th>#</th><th>Discipline</th><th>Section</th><th>Deliverable</th>'
-        + '<th>Qty</th><th>Unit</th><th>Engr</th><th>Dsgn</th><th>HVE</th><th>Total</th>'
-        + '<th>Validation</th><th>Review Reason</th><th>Notes</th>'
+        + '<th>Work Package</th><th>Deliverable</th>'
+        + '<th>Qty</th><th>Unit</th>'
+        + '<th>Engineer Hours</th><th>Designer Hours</th><th>HVE Hours</th><th>Total Hours</th>'
+        + '<th>Validation</th>'
         + '</tr></thead>';
       var tbody = '<tbody>';
-      extraction.items.forEach(function (item, idx) {
+      displayItems.forEach(function (item) {
         var rowClass = item.validationStatus === 'needs_review' ? ' class="import-row-flagged"' : '';
         tbody += '<tr' + rowClass + '>'
-          + '<td>' + (idx + 1) + '</td>'
-          + '<td>' + escapeHtml(item.discipline || '—') + '</td>'
           + '<td>' + escapeHtml(item.estimateSection || '—') + '</td>'
           + '<td>' + escapeHtml(item.deliverable) + '</td>'
           + '<td>' + (item.qty || '—') + '</td>'
@@ -230,8 +250,6 @@
           + '<td>' + (item.hveHours || '—') + '</td>'
           + '<td>' + item.totalHours + '</td>'
           + '<td>' + escapeHtml(item.validationStatus) + '</td>'
-          + '<td>' + escapeHtml(item.reviewReason || '—') + '</td>'
-          + '<td>' + escapeHtml(item.notes) + '</td>'
           + '</tr>';
       });
       tbody += '</tbody>';
@@ -267,7 +285,7 @@
         ]);
         if (hooks.onLineItemsExtracted) hooks.onLineItemsExtracted(extraction, session);
       } catch (err) {
-        renderEstimateLineItems(null);
+        renderMainReviewForSheet(session.activeSheetName, null);
         log('Civil Str extraction error: ' + (err.message || String(err)));
       }
     }
@@ -325,8 +343,8 @@
       previewWrap.innerHTML = '<table class="import-preview-table">' + thead + tbody + '</table>';
 
       if (previewMeta) {
-        previewMeta.textContent = 'Showing first ' + preview.previewRowCount + ' of '
-          + preview.totalRowCount + ' rows · ' + preview.totalColumnCount + ' columns';
+        previewMeta.textContent = 'Debug: first ' + preview.previewRowCount + ' of '
+          + preview.totalRowCount + ' raw worksheet rows · ' + preview.totalColumnCount + ' columns';
       }
     }
 
@@ -379,7 +397,7 @@
         session = null;
         WorkbookReader.clearSession();
         renderTemplateDetection(null);
-        renderEstimateLineItems(null);
+        renderMainReviewForSheet('', null);
         fileLabel.textContent = 'No file selected';
         setStatus(['✓ Page Loaded', '✗ ' + (err.message || 'Workbook read failed')]);
         log('Error: ' + (err.message || String(err)));

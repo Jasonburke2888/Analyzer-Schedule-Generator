@@ -58,20 +58,22 @@
       </div>
     </section>
 
-    <section class="import-panel" aria-label="Worksheet preview">
-      <h3>Preview (first 25 rows)</h3>
-      <p class="import-preview-meta" id="preview-meta"></p>
-      <div id="preview-table-wrap" class="import-preview-wrap">
-        <p class="import-panel-empty">No preview available.</p>
-      </div>
-    </section>
-
-    <section class="import-panel" aria-label="Estimate line items">
-      <h3>Estimate Line Items</h3>
+    <section class="import-panel import-panel-primary" aria-label="Extracted estimate line items">
+      <h3>Extracted Estimate Line Items</h3>
       <p class="import-preview-meta" id="estimate-line-items-summary"></p>
       <div id="estimate-line-items-panel" class="import-preview-wrap">
         <p class="import-panel-empty">Select the Civil Str worksheet to extract Civil/Structural estimate line items.</p>
       </div>
+    </section>
+
+    <section class="import-panel import-panel-debug" aria-label="Raw worksheet preview">
+      <details class="import-debug-details">
+        <summary>Raw Worksheet Preview</summary>
+        <p class="import-preview-meta" id="preview-meta"></p>
+        <div id="preview-table-wrap" class="import-preview-wrap">
+          <p class="import-panel-empty">No raw preview available.</p>
+        </div>
+      </details>
     </section>
 
     <section class="import-panel" aria-label="Console log">

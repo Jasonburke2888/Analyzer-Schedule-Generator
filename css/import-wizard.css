@@ -175,6 +175,30 @@
   margin-right: 4px;
 }
 
+.import-panel-primary h3 {
+  color: var(--blue);
+}
+
+.import-debug-details {
+  font-size: 12px;
+}
+
+.import-debug-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 2px 0 8px;
+  user-select: none;
+}
+
+.import-debug-details[open] summary {
+  margin-bottom: 6px;
+}
+
+.import-panel-debug .import-preview-wrap {
+  max-height: 280px;
+}
+
 .import-preview-meta {
   margin: 0 0 6px;
   font-size: 11px;
