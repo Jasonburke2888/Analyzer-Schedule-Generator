@@ -30,6 +30,7 @@
     'totalHours',
     'notes',
     'validationStatus',
+    'reviewReason',
   ];
 
   var NUMERIC_FIELDS = ['qty', 'engineerHours', 'designerHours', 'hveHours', 'totalHours'];
@@ -57,6 +58,7 @@
       totalHours: 0,
       notes: '',
       validationStatus: VALIDATION_STATUS.NEEDS_REVIEW,
+      reviewReason: '',
     };
     if (!overrides || typeof overrides !== 'object') return base;
     LINE_ITEM_FIELDS.forEach(function (key) {

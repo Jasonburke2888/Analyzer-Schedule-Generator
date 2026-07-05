@@ -18,7 +18,7 @@ Open [http://localhost:8080/import.html](http://localhost:8080/import.html)
 Excel workbook
   → Workbook Reader (preview)
   → Eichleay Template Detection
-  → PM Est Extractor → Estimate Line Items
+  → Civil Str Extractor → Estimate Line Items (Milestone 3A)
 ```
 
 The schedule builder will consume Estimate Line Items in a later milestone.
@@ -29,26 +29,58 @@ Each **Estimate Line Item** is one labor-bearing row from the estimate.
 
 | Field | Description |
 |-------|-------------|
-| Discipline | From estimate column (verbatim) |
-| Estimate Section | Sheet name, section column, or FEL phase when unambiguous |
+| Discipline | `Civil/Structural` for Civil Str extraction |
+| Estimate Section | Orange section header / work package above the row |
 | Deliverable | **Verbatim** from estimate — never renamed |
 | Qty | Quantity when present |
 | Unit | Unit of measure when present |
-| Engineer Hours | Engineer hours column |
-| Designer Hours | Designer hours column |
-| HVE Hours | HVE / checker / review hours when present |
-| Total Hours | Total column or sum when confidently derived |
-| Notes | Estimate notes + FEL detail when needed |
+| Engineer Hours | `ENGR HRS` column |
+| Designer Hours | `DESIGN HRS` column |
+| HVE Hours | `HVE ENGR HRS` + `HVE DESIGN HRS` |
+| Total Hours | `TOTAL` column |
+| Notes | Estimate notes when present |
 | Validation Status | `valid` or `needs_review` |
+| Review Reason | Set when validation fails (e.g. labor mismatch, missing deliverable) |
 
 **Not included:** activity names, mapping status, schedule merge, resource loading.
 
-## Extraction rules (PM Est only)
+## Extraction rules — Civil Str only (Milestone 3A)
 
-- **PM Est sheet only** — other tabs not parsed yet
-- Skip blank rows and total/header rows
-- Do not infer schedule logic or rename deliverables
-- Uncertain values left blank; `validationStatus = needs_review`
+**Worksheet:** `Civil Str` only. PM Est, Summary, and other discipline tabs are not parsed.
+
+**Skip rows:**
+
+- Project metadata above the labor header row
+- Summary / calculation rows: Project Control, Procurement, Construction Support, Life Science, Avg Rate, Weeks, % of ENG, TIC % / TOT, FTEs, ratios, subtotals
+
+**Section headers (Work Package / Section):**
+
+- Orange-filled rows (when styles are available) or label-only rows with no labor hours
+- Examples: Project Investigations, Studies / Calculations, General / Building Drawings
+- Section name is stored in `estimateSection` for rows below it
+
+**Line item creation:**
+
+- Only when `TOTAL` hours &gt; 0
+- Deliverable text preserved exactly as written
+- Labor: `engineerHours` = ENGR HRS, `designerHours` = DESIGN HRS, `hveHours` = HVE ENGR HRS + HVE DESIGN HRS, `totalHours` = TOTAL
+
+**Validation:**
+
+| Condition | validationStatus | reviewReason |
+|-----------|------------------|--------------|
+| ENGR + DESIGN + HVE ≠ TOTAL | `needs_review` | Labor total mismatch |
+| Blank deliverable and TOTAL &gt; 0 | `needs_review` | Missing deliverable |
+| Otherwise | `valid` | (empty) |
+
+**Import page behavior:**
+
+- Select **Civil Str** worksheet → show Civil/Structural line items only
+- Other worksheets → line items panel cleared (no PM Est items shown)
+
+## Extraction rules (PM Est — deferred)
+
+PM Est parsing is implemented in `eichleay-pm-est-extractor.js` but **not wired** on the import page for Milestone 3A.
 
 ## Sample fixture
 
@@ -56,6 +88,8 @@ Each **Estimate Line Item** is one labor-bearing row from the estimate.
 pip install openpyxl
 python3 scripts/generate-pse-fixture.py
 ```
+
+The fixture includes a **Civil Str** sheet with section headers and sample labor rows.
 
 ## Script load order (import.html)
 
@@ -65,12 +99,13 @@ python3 scripts/generate-pse-fixture.py
 <script src="./app/estimate-import/workbook-reader.js"></script>
 <script src="./app/estimate-import/eichleay-template-detector.js"></script>
 <script src="./app/estimate-import/eichleay-pm-est-extractor.js"></script>
+<script src="./app/estimate-import/eichleay-civil-str-extractor.js"></script>
 <script src="./app/estimate-import/workbook-reader-ui.js"></script>
 ```
 
 ## Next step
 
-Schedule builder consumes validated Estimate Line Items (future milestone).
+Additional discipline extractors (Process, Pipe Eng, etc.) and schedule builder consumption (future milestones).
 
 ## Related
 

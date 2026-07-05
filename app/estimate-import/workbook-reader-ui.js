@@ -40,7 +40,7 @@
     var importReviewPanel = document.getElementById('estimate-line-items-panel');
 
     var EichleayDetector = NS.EichleayTemplateDetector;
-    var PmEstExtractor = NS.EichleayPmEstExtractor;
+    var CivilStrExtractor = NS.EichleayCivilStrExtractor;
     var LineItemSchema = NS.EstimateLineItemSchema;
 
     if (!chooseBtn || !fileInput) {
@@ -157,8 +157,30 @@
       log('Matched signals: ' + result.matchedSignals.length
         + '; missing: ' + result.missingSignals.length);
       if (hooks.onTemplateDetection) hooks.onTemplateDetection(result, session);
-      if (result.isMatch) runPmEstExtraction(result);
       return result;
+    }
+
+    function emptyLineItemsMessage(sheetName) {
+      if (CivilStrExtractor && CivilStrExtractor.isCivilStrSheetName(sheetName)) {
+        return 'No Civil/Structural line items extracted yet.';
+      }
+      return 'Select the Civil Str worksheet to extract Civil/Structural estimate line items.';
+    }
+
+    function runLineItemExtractionForSheet(sheetName, detection) {
+      if (!session || !sheetName) {
+        renderEstimateLineItems(null);
+        return;
+      }
+      if (!CivilStrExtractor || !CivilStrExtractor.isCivilStrSheetName(sheetName)) {
+        renderEstimateLineItems(null);
+        if (importReviewPanel) {
+          importReviewPanel.innerHTML = '<p class="import-panel-empty">'
+            + escapeHtml(emptyLineItemsMessage(sheetName)) + '</p>';
+        }
+        return;
+      }
+      runCivilStrExtraction(detection);
     }
 
     function renderEstimateLineItems(extraction) {
@@ -183,7 +205,7 @@
       var thead = '<thead><tr>'
         + '<th>#</th><th>Discipline</th><th>Section</th><th>Deliverable</th>'
         + '<th>Qty</th><th>Unit</th><th>Engr</th><th>Dsgn</th><th>HVE</th><th>Total</th>'
-        + '<th>Validation</th><th>Notes</th>'
+        + '<th>Validation</th><th>Review Reason</th><th>Notes</th>'
         + '</tr></thead>';
       var tbody = '<tbody>';
       extraction.items.forEach(function (item, idx) {
@@ -200,6 +222,7 @@
           + '<td>' + (item.hveHours || '—') + '</td>'
           + '<td>' + item.totalHours + '</td>'
           + '<td>' + escapeHtml(item.validationStatus) + '</td>'
+          + '<td>' + escapeHtml(item.reviewReason || '—') + '</td>'
           + '<td>' + escapeHtml(item.notes) + '</td>'
           + '</tr>';
       });
@@ -207,28 +230,30 @@
       importReviewPanel.innerHTML = '<table class="import-preview-table">' + thead + tbody + '</table>';
     }
 
-    function runPmEstExtraction(detection) {
-      if (!session || !PmEstExtractor) {
-        log('PM Est extractor not available.');
+    function runCivilStrExtraction(detection) {
+      if (!session || !CivilStrExtractor) {
+        log('Civil Str extractor not available.');
         return;
       }
       try {
-        var extraction = PmEstExtractor.extractPmEstLineItems(session, {
+        var meta = detection ? {
           templateName: detection.templateName,
           templateVersion: detection.templateVersion,
-        });
+          sheetName: session.activeSheetName,
+        } : { sheetName: session.activeSheetName };
+        var extraction = CivilStrExtractor.extractCivilStrLineItems(session, meta);
         renderEstimateLineItems(extraction);
-        log('Extracted ' + extraction.rowCount + ' estimate line item(s) from PM Est.'
+        log('Extracted ' + extraction.rowCount + ' Civil/Structural line item(s) from Civil Str.'
           + (extraction.needsReviewCount ? ' (' + extraction.needsReviewCount + ' need review)' : ''));
         setStatus([
           '✓ Page Loaded',
-          '✓ Eichleay PSE detected',
-          '✓ PM Est line items (' + extraction.rowCount + ')',
+          '✓ Workbook Opened',
+          '✓ Civil Str line items (' + extraction.rowCount + ')',
         ]);
         if (hooks.onLineItemsExtracted) hooks.onLineItemsExtracted(extraction, session);
       } catch (err) {
         renderEstimateLineItems(null);
-        log('Extraction error: ' + (err.message || String(err)));
+        log('Civil Str extraction error: ' + (err.message || String(err)));
       }
     }
 
@@ -305,6 +330,7 @@
         renderHeaders(preview);
         renderPreview(preview);
         log('Worksheet selected: ' + sheetName);
+        runLineItemExtractionForSheet(sheetName, null);
         if (hooks.onSheetPreview) hooks.onSheetPreview(preview, session);
       } catch (err) {
         log('Error: ' + (err.message || String(err)));
@@ -330,7 +356,8 @@
           EichleayDetector ? '✓ Template Detection Ready' : '⏳ Template Detection module loading',
         ]);
         log('Workbook opened: ' + info.name + ' (' + info.sheetCount + ' sheet(s))');
-        runTemplateDetection();
+        var detection = runTemplateDetection();
+        runLineItemExtractionForSheet(session.activeSheetName, detection);
         if (hooks.onSessionChange) hooks.onSessionChange(session);
         if (hooks.onSheetPreview) hooks.onSheetPreview(preview, session);
       }).catch(function (err) {
