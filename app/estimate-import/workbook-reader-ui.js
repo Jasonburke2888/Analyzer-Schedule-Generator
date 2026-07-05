@@ -49,6 +49,8 @@
 
     /** @type {object|null} */
     var session = null;
+    /** @type {object|null} */
+    var lastDetection = null;
 
     function log(message) {
       if (hooks.onLog) hooks.onLog(message);
@@ -157,6 +159,7 @@
       log('Matched signals: ' + result.matchedSignals.length
         + '; missing: ' + result.missingSignals.length);
       if (hooks.onTemplateDetection) hooks.onTemplateDetection(result, session);
+      lastDetection = result;
       return result;
     }
 
@@ -193,6 +196,8 @@
         return;
       }
       if (!isCivilStrActive(sheetName)) {
+        log('Stage 2: FAIL — sheet "' + sheetName + '" · exact "Civ Str": '
+          + (sheetName === 'Civ Str') + ' · isCivilStrSheetName: false · extraction not called');
         renderMainReviewForSheet(sheetName, null);
         return;
       }
@@ -262,15 +267,17 @@
         return;
       }
       try {
+        log('Stage 1: OK — calling extractCivilStrLineItems()');
         var meta = detection ? {
           templateName: detection.templateName,
           templateVersion: detection.templateVersion,
           sheetName: session.activeSheetName,
-        } : { sheetName: session.activeSheetName };
+          onLog: log,
+        } : { sheetName: session.activeSheetName, onLog: log };
         var extraction = CivilStrExtractor.extractCivilStrLineItems(session, meta);
         renderEstimateLineItems(extraction);
         log('Civil Str estimate table header at row ' + extraction.bodyStartRow);
-        log('First orange section at row ' + extraction.firstSectionRow
+        log('First work package at row ' + extraction.firstSectionRow
           + (extraction.estimateStartsRow ? ' · deliverables from row ' + extraction.estimateStartsRow : ''));
         log('Ignored rows above table header: ' + extraction.ignoredSetupRows);
         log('Line items extracted: ' + extraction.rowCount
@@ -363,7 +370,7 @@
         renderHeaders(preview);
         renderPreview(preview);
         log('Worksheet selected: ' + sheetName);
-        runLineItemExtractionForSheet(sheetName, null);
+        runLineItemExtractionForSheet(sheetName, lastDetection);
         if (hooks.onSheetPreview) hooks.onSheetPreview(preview, session);
       } catch (err) {
         log('Error: ' + (err.message || String(err)));

@@ -19,7 +19,7 @@
 
   var VS = LineItemSchema.VALIDATION_STATUS;
   var DISCIPLINE = 'Civil/Structural';
-  var SHEET_PATTERNS = [/^civil\s*str$/i, /^civil\s*\/\s*str$/i];
+  var SHEET_PATTERNS = [/^civ\s*str$/i, /^civil\s*str$/i, /^civil\s*\/\s*str$/i];
   var HEADER_SCAN = 80;
   var LABOR_TOLERANCE = 0.01;
   var QA_LINE_ITEM_WARN_THRESHOLD = 25;
@@ -113,6 +113,10 @@
     return false;
   }
 
+  function isNumericLineNo(text) {
+    return /^\d+$/.test(String(text || '').trim());
+  }
+
   function isTableHeaderRepeatRow(row) {
     return rowHasEstimateBodyHeaders(row);
   }
@@ -143,19 +147,104 @@
     return null;
   }
 
+  function isSectionHeaderRow(session, sheetName, rowIndex, raw, colMap, deliverable) {
+    if (!deliverable || isSummaryRowLabel(deliverable)) return false;
+
+    if (readOrangeSectionLabel(session, sheetName, rowIndex, raw, colMap)) return true;
+
+    var deliverableCell = getSheetCell(session, sheetName, rowIndex, colMap.deliverable);
+    if (deliverableCell && isOrangeFill(deliverableCell)) return true;
+
+    var totalHours = readNumber(raw, colMap.total);
+    if (totalHours != null && totalHours > 0) return false;
+    if (rowLaborSum(raw, colMap) > 0) return false;
+
+    var qty = readNumber(raw, colMap.qty);
+    if (qty != null && qty > 0) return false;
+
+    var lineNo = readText(raw, colMap.lineNo);
+    if (isNumericLineNo(lineNo)) return false;
+
+    return true;
+  }
+
+  function scoreLaborHeaderMap(map) {
+    var score = 0;
+    if (map.engr >= 0) score += 3;
+    if (map.design >= 0) score += 3;
+    if (map.total >= 0) score += 4;
+    if (map.hveEngr >= 0) score += 2;
+    if (map.hveDesign >= 0) score += 2;
+    return score;
+  }
+
   /**
-   * First orange section row after the estimate table header.
+   * Labor-hour sub-header row often sits directly under the estimate table header.
+   * @returns {{ rowIndex: number, map: object|null, score: number }}
+   */
+  function findLaborColumnMap(rows, tableHeaderRow) {
+    var best = { rowIndex: -1, map: null, score: 0 };
+    for (var r = tableHeaderRow; r < Math.min(rows.length, tableHeaderRow + 10); r++) {
+      var map = mapCivilStrColumns(rows[r] || []);
+      var score = scoreLaborHeaderMap(map);
+      if (score > best.score) best = { rowIndex: r, map: map, score: score };
+    }
+    return best;
+  }
+
+  function mergeColumnMaps(tableMap, laborMap) {
+    if (!laborMap) return tableMap;
+    var merged = {
+      lineNo: tableMap.lineNo,
+      deliverable: tableMap.deliverable,
+      qty: tableMap.qty,
+      unit: tableMap.unit,
+      engr: tableMap.engr,
+      design: tableMap.design,
+      hveEngr: tableMap.hveEngr,
+      hveDesign: tableMap.hveDesign,
+      total: tableMap.total,
+    };
+    if (laborMap.engr >= 0) merged.engr = laborMap.engr;
+    if (laborMap.design >= 0) merged.design = laborMap.design;
+    if (laborMap.hveEngr >= 0) merged.hveEngr = laborMap.hveEngr;
+    if (laborMap.hveDesign >= 0) merged.hveDesign = laborMap.hveDesign;
+    if (laborMap.total >= 0) merged.total = laborMap.total;
+    return merged;
+  }
+
+  function isPreambleLabel(label) {
+    var text = ExcelReader.cellText(label);
+    if (!text) return false;
+    return /^scope of work$/i.test(text)
+      || /^start date$/i.test(text)
+      || /^finish date$/i.test(text)
+      || /^duration$/i.test(text);
+  }
+
+  /**
+   * First work package after the estimate table header (orange fill or structural section row).
    * @returns {{ rowIndex: number, label: string }}
    */
-  function findFirstOrangeSection(session, sheetName, rows, tableHeaderRow, colMap) {
+  function findFirstWorkPackage(session, sheetName, rows, tableHeaderRow, colMap) {
     for (var r = tableHeaderRow + 1; r < rows.length; r++) {
       var raw = rows[r] || [];
       if (isBlankRow(raw)) continue;
       if (isTableHeaderRepeatRow(raw)) continue;
-      var label = readOrangeSectionLabel(session, sheetName, r, raw, colMap);
+
+      var deliverable = readText(raw, colMap.deliverable);
+      if (isPreambleLabel(deliverable)) continue;
+      if (!isSectionHeaderRow(session, sheetName, r, raw, colMap, deliverable)) continue;
+
+      var label = readOrangeSectionLabel(session, sheetName, r, raw, colMap) || deliverable;
       if (label) return { rowIndex: r, label: label };
     }
     return { rowIndex: -1, label: '' };
+  }
+
+  /** @deprecated Use findFirstWorkPackage */
+  function findFirstOrangeSection(session, sheetName, rows, tableHeaderRow, colMap) {
+    return findFirstWorkPackage(session, sheetName, rows, tableHeaderRow, colMap);
   }
 
   function rowHasEstimateBodyHeaders(row) {
@@ -295,35 +384,99 @@
   }
 
   /**
+   * Diagnostic scan — first row that would pass pre-extraction filters with TOTAL > 0.
+   * @returns {{ rowIndex: number, deliverable: string, totalHours: number }|null}
+   */
+  function findFirstDeliverableCandidate(session, sheetName, rows, firstWorkPackage, colMap) {
+    var currentSection = firstWorkPackage.label;
+    for (var r = firstWorkPackage.rowIndex + 1; r < rows.length; r++) {
+      var raw = rows[r] || [];
+      if (isBlankRow(raw)) continue;
+      if (isTableHeaderRepeatRow(raw)) continue;
+
+      var deliverable = readText(raw, colMap.deliverable);
+      if (isPreambleLabel(deliverable)) continue;
+      if (isSectionHeaderRow(session, sheetName, r, raw, colMap, deliverable)) {
+        currentSection = readOrangeSectionLabel(session, sheetName, r, raw, colMap) || deliverable;
+        continue;
+      }
+      if (isSummaryRowLabel(deliverable)) continue;
+
+      var totalHours = readNumber(raw, colMap.total);
+      if (totalHours == null || totalHours <= 0) continue;
+
+      return { rowIndex: r, deliverable: deliverable, totalHours: totalHours, section: currentSection };
+    }
+    return null;
+  }
+
+  /**
    * @param {object} session
-   * @param {{ sheetName?: string, templateName?: string, templateVersion?: string }} [meta]
+   * @param {{ sheetName?: string, templateName?: string, templateVersion?: string, onLog?: function(string) }} [meta]
    */
   function extractCivilStrLineItems(session, meta) {
     meta = meta || {};
+    var onLog = meta.onLog || null;
+
+    function stageLog(stage, ok, detail) {
+      if (!onLog) return;
+      onLog('Stage ' + stage + ': ' + (ok ? 'OK' : 'FAIL') + ' — ' + detail);
+    }
+
+    if (onLog) onLog('Stage 1: OK — extractCivilStrLineItems() called');
+
     if (!session || !session.workbook) {
+      stageLog(1, false, 'no workbook session');
       throw new Error('No workbook session available for extraction.');
     }
 
     var sheetName = meta.sheetName || findCivilStrSheetName(session.sheetNames || []);
-    if (!sheetName) throw new Error('Civil Str sheet not found in workbook.');
+    var exactCivStr = sheetName === 'Civ Str';
+    if (!sheetName) {
+      stageLog(2, false, 'Civil Str sheet not found in workbook');
+      throw new Error('Civil Str sheet not found in workbook.');
+    }
+    stageLog(2, isCivilStrSheetName(sheetName),
+      'selected sheet "' + sheetName + '" · exact "Civ Str": ' + exactCivStr
+      + ' · isCivilStrSheetName: ' + isCivilStrSheetName(sheetName));
     if (!isCivilStrSheetName(sheetName)) {
       throw new Error('Extraction limited to Civil Str worksheet.');
     }
 
     var rows = getRows(session, sheetName);
-    var bodyStart = findEstimateBodyStart(rows);
-    if (bodyStart.rowIndex < 0 || !bodyStart.map) {
-      throw new Error('Could not find Civil Str estimate body header row (NO., DESCRIPTION, UNIT, QTY, ENGR HOURS PER UNIT, TOTAL).');
+    stageLog(3, rows.length > 0, 'row count = ' + rows.length);
+    if (!rows.length) {
+      throw new Error('Civil Str worksheet is empty.');
     }
 
-    var colMap = bodyStart.map;
+    var bodyStart = findEstimateBodyStart(rows);
+    if (bodyStart.rowIndex < 0 || !bodyStart.map) {
+      stageLog(4, false, 'estimate table header not found (NO., DESCRIPTION, UNIT, QTY, ENGR HOURS PER UNIT, TOTAL)');
+      throw new Error('Could not find Civil Str estimate body header row (NO., DESCRIPTION, UNIT, QTY, ENGR HOURS PER UNIT, TOTAL).');
+    }
+    stageLog(4, true, 'table header at row ' + (bodyStart.rowIndex + 1));
+
+    var tableMap = bodyStart.map;
     var tableHeaderRow = bodyStart.rowIndex;
+    var laborHeader = findLaborColumnMap(rows, tableHeaderRow);
+    var colMap = mergeColumnMaps(tableMap, laborHeader.score >= 6 ? laborHeader.map : null);
     var bodyStartRow = tableHeaderRow + 1;
     var ignoredSetupRows = bodyStart.ignoredSetupRows;
 
-    var firstSection = findFirstOrangeSection(session, sheetName, rows, tableHeaderRow, colMap);
-    if (firstSection.rowIndex < 0) {
-      throw new Error('Could not find first orange section header after Civil Str estimate table header.');
+    var firstWorkPackage = findFirstWorkPackage(session, sheetName, rows, tableHeaderRow, colMap);
+    if (firstWorkPackage.rowIndex < 0) {
+      stageLog(5, false, 'first work package not found after table header row ' + (tableHeaderRow + 1));
+      throw new Error('Could not find first work package after Civil Str estimate table header.');
+    }
+    stageLog(5, true, 'first work package at row ' + (firstWorkPackage.rowIndex + 1) + ': ' + firstWorkPackage.label);
+
+    var firstCandidate = findFirstDeliverableCandidate(
+      session, sheetName, rows, firstWorkPackage, colMap);
+    if (!firstCandidate) {
+      stageLog(6, false, 'no labor-bearing deliverable row found after work package');
+    } else {
+      stageLog(6, true, 'first candidate at row ' + (firstCandidate.rowIndex + 1)
+        + ': "' + firstCandidate.deliverable + '" · Total = ' + firstCandidate.totalHours);
     }
 
     var sourceFile = session.fileName || '';
@@ -331,22 +484,22 @@
     var templateVersion = meta.templateVersion || TEMPLATE_VERSION;
     var lineItems = [];
     var needsReviewCount = 0;
-    var currentSection = firstSection.label;
-    var firstSectionRow = firstSection.rowIndex + 1;
+    var currentSection = firstWorkPackage.label;
+    var firstSectionRow = firstWorkPackage.rowIndex + 1;
     var estimateStartsRow = firstSectionRow + 1;
 
-    for (var r = firstSection.rowIndex + 1; r < rows.length; r++) {
+    for (var r = firstWorkPackage.rowIndex + 1; r < rows.length; r++) {
       var raw = rows[r] || [];
       if (isBlankRow(raw)) continue;
       if (isTableHeaderRepeatRow(raw)) continue;
 
-      var sectionLabel = readOrangeSectionLabel(session, sheetName, r, raw, colMap);
-      if (sectionLabel) {
-        currentSection = sectionLabel;
+      var deliverable = readText(raw, colMap.deliverable);
+      if (isPreambleLabel(deliverable)) continue;
+      if (isSectionHeaderRow(session, sheetName, r, raw, colMap, deliverable)) {
+        currentSection = readOrangeSectionLabel(session, sheetName, r, raw, colMap) || deliverable;
         continue;
       }
 
-      var deliverable = readText(raw, colMap.deliverable);
       if (isSummaryRowLabel(deliverable)) continue;
 
       var totalHours = readNumber(raw, colMap.total);
@@ -409,6 +562,7 @@
     isCivilStrSheetName: isCivilStrSheetName,
     findCivilStrSheetName: findCivilStrSheetName,
     findEstimateBodyStart: findEstimateBodyStart,
+    findFirstWorkPackage: findFirstWorkPackage,
     findFirstOrangeSection: findFirstOrangeSection,
     extractCivilStrLineItems: extractCivilStrLineItems,
     mapCivilStrColumns: mapCivilStrColumns,
