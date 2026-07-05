@@ -181,6 +181,11 @@
   color: var(--muted);
 }
 
+.import-preview-meta.import-qa-warning {
+  color: #b45309;
+  font-weight: 600;
+}
+
 .import-preview-wrap {
   overflow: auto;
   max-height: 360px;

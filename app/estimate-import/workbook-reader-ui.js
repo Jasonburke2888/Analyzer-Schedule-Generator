@@ -186,7 +186,10 @@
     function renderEstimateLineItems(extraction) {
       if (!importReviewPanel) return;
       if (!extraction || !extraction.items || !extraction.items.length) {
-        if (importReviewSummary) importReviewSummary.textContent = '';
+        if (importReviewSummary) {
+          importReviewSummary.textContent = '';
+          importReviewSummary.classList.remove('import-qa-warning');
+        }
         importReviewPanel.innerHTML = '<p class="import-panel-empty">No estimate line items extracted yet.</p>';
         return;
       }
@@ -196,10 +199,15 @@
         : { total: extraction.rowCount, valid: 0, needs_review: extraction.needsReviewCount };
 
       if (importReviewSummary) {
-        importReviewSummary.textContent = 'Sheet: ' + extraction.sheetName
+        var summaryText = 'Sheet: ' + extraction.sheetName
           + ' · Line items: ' + summary.total
           + ' · Valid: ' + summary.valid
           + ' · Needs review: ' + summary.needs_review;
+        if (extraction.qaWarning) {
+          summaryText += ' · ⚠ ' + extraction.qaWarning;
+        }
+        importReviewSummary.textContent = summaryText;
+        importReviewSummary.classList.toggle('import-qa-warning', !!extraction.qaWarning);
       }
 
       var thead = '<thead><tr>'
@@ -243,8 +251,13 @@
         } : { sheetName: session.activeSheetName };
         var extraction = CivilStrExtractor.extractCivilStrLineItems(session, meta);
         renderEstimateLineItems(extraction);
-        log('Extracted ' + extraction.rowCount + ' Civil/Structural line item(s) from Civil Str.'
+        log('Civil Str estimate body starts at row ' + extraction.bodyStartRow);
+        log('Ignored setup rows: ' + extraction.ignoredSetupRows);
+        log('Line items extracted: ' + extraction.rowCount
           + (extraction.needsReviewCount ? ' (' + extraction.needsReviewCount + ' need review)' : ''));
+        if (extraction.qaWarning) {
+          log('Warning: ' + extraction.qaWarning);
+        }
         setStatus([
           '✓ Page Loaded',
           '✓ Workbook Opened',

@@ -20,8 +20,11 @@
   var VS = LineItemSchema.VALIDATION_STATUS;
   var DISCIPLINE = 'Civil/Structural';
   var SHEET_PATTERNS = [/^civil\s*str$/i, /^civil\s*\/\s*str$/i];
-  var HEADER_SCAN = 50;
+  var HEADER_SCAN = 80;
   var LABOR_TOLERANCE = 0.01;
+  var QA_LINE_ITEM_WARN_THRESHOLD = 25;
+  var QA_TOO_MANY_LINE_ITEMS_MSG =
+    'Too many Civil/Structural line items — parser may be reading summary/setup rows.';
   var TEMPLATE_NAME = EichleayDetector ? EichleayDetector.TEMPLATE_NAME : 'Eichleay PSE';
   var TEMPLATE_VERSION = EichleayDetector ? EichleayDetector.TEMPLATE_VERSION : 'old';
 
@@ -121,8 +124,43 @@
     return false;
   }
 
+  function rowHasEstimateBodyHeaders(row) {
+    var headers = (row || []).map(normalizeHeader).filter(function (h) { return h; });
+    function hasMatch(pattern) {
+      for (var i = 0; i < headers.length; i++) {
+        if (pattern.test(headers[i])) return true;
+      }
+      return false;
+    }
+    return hasMatch(/^no\.?$/)
+      && hasMatch(/^description$/)
+      && hasMatch(/^unit$/)
+      && hasMatch(/^qty$|^quantity$/)
+      && hasMatch(/engr hours per unit/)
+      && hasMatch(/^total$/);
+  }
+
+  /**
+   * Find the first real estimate table header row (Estimate Body Start).
+   * @param {unknown[][]} rows
+   * @returns {{ rowIndex: number, map: object|null, ignoredSetupRows: number }}
+   */
+  function findEstimateBodyStart(rows) {
+    for (var r = 0; r < Math.min(rows.length, HEADER_SCAN); r++) {
+      var row = rows[r] || [];
+      if (!rowHasEstimateBodyHeaders(row)) continue;
+      return {
+        rowIndex: r,
+        map: mapCivilStrColumns(row),
+        ignoredSetupRows: r,
+      };
+    }
+    return { rowIndex: -1, map: null, ignoredSetupRows: 0 };
+  }
+
   function mapCivilStrColumns(headerRow) {
     var map = {
+      lineNo: -1,
       deliverable: -1,
       qty: -1,
       unit: -1,
@@ -136,21 +174,24 @@
     (headerRow || []).forEach(function (cell, index) {
       var h = normalizeHeader(cell);
       if (!h) return;
-      if (map.deliverable < 0 && (
-        /short form.*task description/.test(h)
+      if (map.lineNo < 0 && /^no\.?$/.test(h)) {
+        map.lineNo = index;
+      } else if (map.deliverable < 0 && (
+        /^description$/.test(h)
+        || /short form.*task description/.test(h)
         || /^task description$/.test(h)
         || /^deliverable$/.test(h)
-        || /^description$/.test(h)
         || /work item/.test(h)
       )) {
         map.deliverable = index;
-      } else if (map.qty < 0 && /^qty$|^quantity$|^#/.test(h)) {
+      } else if (map.qty < 0 && /^qty$|^quantity$/.test(h)) {
         map.qty = index;
       } else if (map.unit < 0 && /^unit$|^uom$/.test(h)) {
         map.unit = index;
-      } else if (map.engr < 0 && (/^engr hrs$/.test(h) || (/\bengr\b/.test(h) && /hrs|hours/.test(h) && h.indexOf('hve') < 0))) {
+      } else if (map.engr < 0 && /\bengr\b/.test(h) && /hrs|hours/.test(h)
+        && !/per unit/.test(h) && h.indexOf('hve') < 0 && !/\bdesign\b/.test(h)) {
         map.engr = index;
-      } else if (map.design < 0 && (/^design hrs$/.test(h) || (/\bdesign\b/.test(h) && /hrs|hours/.test(h) && h.indexOf('hve') < 0))) {
+      } else if (map.design < 0 && (/\bdesign\b/.test(h) && /hrs|hours/.test(h) && h.indexOf('hve') < 0)) {
         map.design = index;
       } else if (map.hveEngr < 0 && /hve.*engr|engr.*hve/.test(h)) {
         map.hveEngr = index;
@@ -175,22 +216,11 @@
     return map;
   }
 
+  /** @deprecated Use findEstimateBodyStart */
   function findHeaderRowIndex(rows) {
-    var best = { rowIndex: -1, map: null, score: 0 };
-    for (var r = 0; r < Math.min(rows.length, HEADER_SCAN); r++) {
-      var row = rows[r] || [];
-      var map = mapCivilStrColumns(row);
-      var score = 0;
-      if (map.engr >= 0) score += 3;
-      if (map.design >= 0) score += 3;
-      if (map.total >= 0) score += 4;
-      if (map.hveEngr >= 0) score += 2;
-      if (map.hveDesign >= 0) score += 2;
-      if (map.deliverable >= 0) score += 2;
-      if (score > best.score) best = { rowIndex: r, map: map, score: score };
-    }
-    if (best.score < 6) return { rowIndex: -1, map: null, score: 0 };
-    return best;
+    var body = findEstimateBodyStart(rows);
+    if (body.rowIndex < 0) return { rowIndex: -1, map: null, score: 0 };
+    return { rowIndex: body.rowIndex, map: body.map, score: 1 };
   }
 
   function readNumber(row, colIndex) {
@@ -263,12 +293,14 @@
     }
 
     var rows = getRows(session, sheetName);
-    var header = findHeaderRowIndex(rows);
-    if (header.rowIndex < 0 || !header.map) {
-      throw new Error('Could not identify Civil Str header row (ENGR HRS / DESIGN HRS / TOTAL).');
+    var bodyStart = findEstimateBodyStart(rows);
+    if (bodyStart.rowIndex < 0 || !bodyStart.map) {
+      throw new Error('Could not find Civil Str estimate body header row (NO., DESCRIPTION, UNIT, QTY, ENGR HOURS PER UNIT, TOTAL).');
     }
 
-    var colMap = header.map;
+    var colMap = bodyStart.map;
+    var bodyStartRow = bodyStart.rowIndex + 1;
+    var ignoredSetupRows = bodyStart.ignoredSetupRows;
     var sourceFile = session.fileName || '';
     var templateName = meta.templateName || TEMPLATE_NAME;
     var templateVersion = meta.templateVersion || TEMPLATE_VERSION;
@@ -276,7 +308,7 @@
     var needsReviewCount = 0;
     var currentSection = '';
 
-    for (var r = header.rowIndex + 1; r < rows.length; r++) {
+    for (var r = bodyStart.rowIndex + 1; r < rows.length; r++) {
       var raw = rows[r] || [];
       if (isBlankRow(raw)) continue;
 
@@ -323,20 +355,29 @@
       sheetName: sheetName,
     }, lineItems);
 
+    var rowCount = lineItems.length;
+    var qaWarning = rowCount > QA_LINE_ITEM_WARN_THRESHOLD ? QA_TOO_MANY_LINE_ITEMS_MSG : '';
+
     return {
       batch: batch,
       items: lineItems,
       sheetName: sheetName,
-      rowCount: lineItems.length,
+      rowCount: rowCount,
       needsReviewCount: needsReviewCount,
+      bodyStartRow: bodyStartRow,
+      ignoredSetupRows: ignoredSetupRows,
+      qaWarning: qaWarning,
     };
   }
 
   NS.EichleayCivilStrExtractor = {
     DISCIPLINE: DISCIPLINE,
     SHEET_PATTERNS: SHEET_PATTERNS,
+    QA_LINE_ITEM_WARN_THRESHOLD: QA_LINE_ITEM_WARN_THRESHOLD,
+    QA_TOO_MANY_LINE_ITEMS_MSG: QA_TOO_MANY_LINE_ITEMS_MSG,
     isCivilStrSheetName: isCivilStrSheetName,
     findCivilStrSheetName: findCivilStrSheetName,
+    findEstimateBodyStart: findEstimateBodyStart,
     extractCivilStrLineItems: extractCivilStrLineItems,
     mapCivilStrColumns: mapCivilStrColumns,
   };

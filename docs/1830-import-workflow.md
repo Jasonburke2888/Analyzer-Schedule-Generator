@@ -48,9 +48,21 @@ Each **Estimate Line Item** is one labor-bearing row from the estimate.
 
 **Worksheet:** `Civil Str` only. PM Est, Summary, and other discipline tabs are not parsed.
 
-**Skip rows:**
+**Estimate Body Start (no fixed row numbers):**
 
-- Project metadata above the labor header row
+Scan from the top of the sheet for the **first row** that contains all of these headers in the same row:
+
+- `NO.`
+- `DESCRIPTION`
+- `UNIT`
+- `QTY`
+- `ENGR HOURS PER UNIT`
+- `TOTAL`
+
+Extraction begins on the row **after** that header. Everything above is ignored (scope of work, project metadata, start/finish dates, duration, blank setup rows).
+
+**Skip rows (below the body header):**
+
 - Summary / calculation rows: Project Control, Procurement, Construction Support, Life Science, Avg Rate, Weeks, % of ENG, TIC % / TOT, FTEs, ratios, subtotals
 
 **Section headers (Work Package / Section):**
@@ -62,8 +74,23 @@ Each **Estimate Line Item** is one labor-bearing row from the estimate.
 **Line item creation:**
 
 - Only when `TOTAL` hours &gt; 0
-- Deliverable text preserved exactly as written
+- Rows with `TOTAL` = 0 are ignored
+- Deliverable text preserved exactly as written (from `DESCRIPTION`)
 - Labor: `engineerHours` = ENGR HRS, `designerHours` = DESIGN HRS, `hveHours` = HVE ENGR HRS + HVE DESIGN HRS, `totalHours` = TOTAL
+
+**Console log (import page):**
+
+- `Civil Str estimate body starts at row X`
+- `Ignored setup rows: N`
+- `Line items extracted: N`
+
+**QA warning (non-blocking):**
+
+A normal discipline tab usually produces **5–20** estimate line items. If extraction yields **more than 25**, the import page logs and displays:
+
+`Too many Civil/Structural line items — parser may be reading summary/setup rows.`
+
+Import is not blocked — this is a QA hint only.
 
 **Validation:**
 
