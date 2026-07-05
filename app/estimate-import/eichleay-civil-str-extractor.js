@@ -28,21 +28,10 @@
   var TEMPLATE_NAME = EichleayDetector ? EichleayDetector.TEMPLATE_NAME : 'Eichleay PSE';
   var TEMPLATE_VERSION = EichleayDetector ? EichleayDetector.TEMPLATE_VERSION : 'old';
 
-  var SKIP_ROW_PATTERNS = [
-    /^project control$/i,
-    /^procurement$/i,
-    /^construction support$/i,
-    /^life science$/i,
-    /^avg\.?\s*rate$/i,
-    /^weeks$/i,
-    /% of eng/i,
-    /tic\s*%/i,
-    /\btot\b/i,
-    /^ftes?$/i,
-    /ratio/i,
+  /** Summary/calculation rows within the estimate body (not setup metadata). */
+  var SUMMARY_ROW_PATTERNS = [
     /^subtotal$/i,
     /^sub\s*total$/i,
-    /^total$/i,
     /^grand total$/i,
     /^sum$/i,
   ];
@@ -115,13 +104,58 @@
     });
   }
 
-  function isSkipRowLabel(label) {
+  function isSummaryRowLabel(label) {
     var text = ExcelReader.cellText(label);
     if (!text) return false;
-    for (var i = 0; i < SKIP_ROW_PATTERNS.length; i++) {
-      if (SKIP_ROW_PATTERNS[i].test(text)) return true;
+    for (var i = 0; i < SUMMARY_ROW_PATTERNS.length; i++) {
+      if (SUMMARY_ROW_PATTERNS[i].test(text)) return true;
     }
     return false;
+  }
+
+  function isTableHeaderRepeatRow(row) {
+    return rowHasEstimateBodyHeaders(row);
+  }
+
+  function rowHasOrangeFill(session, sheetName, rowIndex, maxCols) {
+    for (var c = 0; c < maxCols; c++) {
+      var cell = getSheetCell(session, sheetName, rowIndex, c);
+      if (cell && isOrangeFill(cell)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Orange-filled section header label, or null.
+   * @returns {string|null}
+   */
+  function readOrangeSectionLabel(session, sheetName, rowIndex, raw, colMap) {
+    var colCount = Math.max((raw || []).length, colMap.deliverable + 1, 12);
+    if (!rowHasOrangeFill(session, sheetName, rowIndex, colCount)) return null;
+
+    var label = readText(raw, colMap.deliverable);
+    if (label) return label;
+
+    for (var c = 0; c < (raw || []).length; c++) {
+      var text = readText(raw, c);
+      if (text) return text;
+    }
+    return null;
+  }
+
+  /**
+   * First orange section row after the estimate table header.
+   * @returns {{ rowIndex: number, label: string }}
+   */
+  function findFirstOrangeSection(session, sheetName, rows, tableHeaderRow, colMap) {
+    for (var r = tableHeaderRow + 1; r < rows.length; r++) {
+      var raw = rows[r] || [];
+      if (isBlankRow(raw)) continue;
+      if (isTableHeaderRepeatRow(raw)) continue;
+      var label = readOrangeSectionLabel(session, sheetName, r, raw, colMap);
+      if (label) return { rowIndex: r, label: label };
+    }
+    return { rowIndex: -1, label: '' };
   }
 
   function rowHasEstimateBodyHeaders(row) {
@@ -243,22 +277,6 @@
       + (readNumber(row, colMap.hveDesign) || 0);
   }
 
-  function isSectionHeaderRow(session, sheetName, rowIndex, raw, colMap, deliverable) {
-    if (!deliverable || isSkipRowLabel(deliverable)) return false;
-
-    var deliverableCell = getSheetCell(session, sheetName, rowIndex, colMap.deliverable);
-    if (deliverableCell && isOrangeFill(deliverableCell)) return true;
-
-    var totalHours = readNumber(raw, colMap.total);
-    if (totalHours != null && totalHours > 0) return false;
-    if (rowLaborSum(raw, colMap) > 0) return false;
-
-    var qty = readNumber(raw, colMap.qty);
-    if (qty != null && qty > 0) return false;
-
-    return true;
-  }
-
   function buildValidation(deliverable, engineerHours, designerHours, hveHours, totalHours) {
     var reviewReason = '';
     var validationStatus = VS.VALID;
@@ -299,26 +317,37 @@
     }
 
     var colMap = bodyStart.map;
-    var bodyStartRow = bodyStart.rowIndex + 1;
+    var tableHeaderRow = bodyStart.rowIndex;
+    var bodyStartRow = tableHeaderRow + 1;
     var ignoredSetupRows = bodyStart.ignoredSetupRows;
+
+    var firstSection = findFirstOrangeSection(session, sheetName, rows, tableHeaderRow, colMap);
+    if (firstSection.rowIndex < 0) {
+      throw new Error('Could not find first orange section header after Civil Str estimate table header.');
+    }
+
     var sourceFile = session.fileName || '';
     var templateName = meta.templateName || TEMPLATE_NAME;
     var templateVersion = meta.templateVersion || TEMPLATE_VERSION;
     var lineItems = [];
     var needsReviewCount = 0;
-    var currentSection = '';
+    var currentSection = firstSection.label;
+    var firstSectionRow = firstSection.rowIndex + 1;
+    var estimateStartsRow = firstSectionRow + 1;
 
-    for (var r = bodyStart.rowIndex + 1; r < rows.length; r++) {
+    for (var r = firstSection.rowIndex + 1; r < rows.length; r++) {
       var raw = rows[r] || [];
       if (isBlankRow(raw)) continue;
+      if (isTableHeaderRepeatRow(raw)) continue;
 
-      var deliverable = readText(raw, colMap.deliverable);
-      if (isSkipRowLabel(deliverable)) continue;
-
-      if (isSectionHeaderRow(session, sheetName, r, raw, colMap, deliverable)) {
-        currentSection = deliverable;
+      var sectionLabel = readOrangeSectionLabel(session, sheetName, r, raw, colMap);
+      if (sectionLabel) {
+        currentSection = sectionLabel;
         continue;
       }
+
+      var deliverable = readText(raw, colMap.deliverable);
+      if (isSummaryRowLabel(deliverable)) continue;
 
       var totalHours = readNumber(raw, colMap.total);
       if (totalHours == null || totalHours <= 0) continue;
@@ -365,6 +394,8 @@
       rowCount: rowCount,
       needsReviewCount: needsReviewCount,
       bodyStartRow: bodyStartRow,
+      firstSectionRow: firstSectionRow,
+      estimateStartsRow: estimateStartsRow,
       ignoredSetupRows: ignoredSetupRows,
       qaWarning: qaWarning,
     };
@@ -378,6 +409,7 @@
     isCivilStrSheetName: isCivilStrSheetName,
     findCivilStrSheetName: findCivilStrSheetName,
     findEstimateBodyStart: findEstimateBodyStart,
+    findFirstOrangeSection: findFirstOrangeSection,
     extractCivilStrLineItems: extractCivilStrLineItems,
     mapCivilStrColumns: mapCivilStrColumns,
   };

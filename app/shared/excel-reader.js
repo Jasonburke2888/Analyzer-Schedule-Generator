@@ -20,7 +20,7 @@
    */
   function readWorkbookFromArrayBuffer(buffer) {
     var XLSX = requireXlsx();
-    return XLSX.read(buffer, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+    return XLSX.read(buffer, { type: 'array', cellDates: true, cellNF: false, cellText: false, cellStyles: true });
   }
 
   /**

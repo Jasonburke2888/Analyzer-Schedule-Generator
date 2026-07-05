@@ -251,8 +251,10 @@
         } : { sheetName: session.activeSheetName };
         var extraction = CivilStrExtractor.extractCivilStrLineItems(session, meta);
         renderEstimateLineItems(extraction);
-        log('Civil Str estimate body starts at row ' + extraction.bodyStartRow);
-        log('Ignored setup rows: ' + extraction.ignoredSetupRows);
+        log('Civil Str estimate table header at row ' + extraction.bodyStartRow);
+        log('First orange section at row ' + extraction.firstSectionRow
+          + (extraction.estimateStartsRow ? ' · deliverables from row ' + extraction.estimateStartsRow : ''));
+        log('Ignored rows above table header: ' + extraction.ignoredSetupRows);
         log('Line items extracted: ' + extraction.rowCount
           + (extraction.needsReviewCount ? ' (' + extraction.needsReviewCount + ' need review)' : ''));
         if (extraction.qaWarning) {
