@@ -65,6 +65,20 @@
   color: var(--muted);
 }
 
+.import-file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .import-panel {
   background: var(--card);
   border: 1px solid var(--line);

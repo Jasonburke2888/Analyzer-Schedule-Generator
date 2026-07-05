@@ -25,8 +25,8 @@
     </section>
 
     <section class="import-toolbar" aria-label="Import actions">
-      <button type="button" id="btn-choose-excel" class="btn">Choose Excel File</button>
-      <input type="file" id="excel-file-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+      <button type="button" id="chooseFileBtn" class="btn">Choose Excel File</button>
+      <input type="file" id="excelFileInput" class="import-file-input-hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
       <span class="import-file-label" id="selected-file-label">No file selected</span>
     </section>
 
@@ -102,12 +102,16 @@
       document.addEventListener('DOMContentLoaded', function () {
         log('Estimate import — workbook reader, template detection, line item extraction.');
         log('Estimate is source of truth. No schedule activities created here.');
-        AnalyzerSchedule.WorkbookReaderUI.mount({
-          onLog: log,
-          onLineItemsExtracted: function (extraction) {
-            log('Estimate line items ready — ' + extraction.rowCount + ' labor-bearing row(s).');
-          },
-        });
+        try {
+          AnalyzerSchedule.WorkbookReaderUI.mount({
+            onLog: log,
+            onLineItemsExtracted: function (extraction) {
+              log('Estimate line items ready — ' + extraction.rowCount + ' labor-bearing row(s).');
+            },
+          });
+        } catch (err) {
+          log('UI mount error: ' + (err.message || String(err)));
+        }
       });
     })();
   </script>

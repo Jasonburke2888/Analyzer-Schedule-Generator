@@ -26,8 +26,8 @@
   function mountWorkbookReaderUI(hooks) {
     hooks = hooks || {};
 
-    var chooseBtn = document.getElementById('btn-choose-excel');
-    var fileInput = document.getElementById('excel-file-input');
+    var chooseBtn = document.getElementById('chooseFileBtn');
+    var fileInput = document.getElementById('excelFileInput');
     var fileLabel = document.getElementById('selected-file-label');
     var statusList = document.getElementById('import-engine-status');
     var workbookPanel = document.getElementById('workbook-info-panel');
@@ -345,6 +345,8 @@
     }
 
     chooseBtn.addEventListener('click', function () {
+      log('Choose Excel File clicked');
+      fileInput.value = '';
       fileInput.click();
     });
 
@@ -354,6 +356,7 @@
         fileLabel.textContent = 'No file selected';
         return;
       }
+      log('Selected file: ' + file.name);
       openFile(file);
     });
   }
