@@ -36,8 +36,12 @@
     var previewWrap = document.getElementById('preview-table-wrap');
     var previewMeta = document.getElementById('preview-meta');
     var templateDetectionPanel = document.getElementById('template-detection-result');
+    var importReviewSummary = document.getElementById('estimate-line-items-summary');
+    var importReviewPanel = document.getElementById('estimate-line-items-panel');
 
     var EichleayDetector = NS.EichleayTemplateDetector;
+    var PmEstExtractor = NS.EichleayPmEstExtractor;
+    var LineItemSchema = NS.EstimateLineItemSchema;
 
     if (!chooseBtn || !fileInput) {
       throw new Error('Workbook Reader UI: required elements missing on import.html');
@@ -153,9 +157,82 @@
       log('Matched signals: ' + result.matchedSignals.length
         + '; missing: ' + result.missingSignals.length);
       if (hooks.onTemplateDetection) hooks.onTemplateDetection(result, session);
+      if (result.isMatch) runPmEstExtraction(result);
       return result;
     }
 
+    function renderEstimateLineItems(extraction) {
+      if (!importReviewPanel) return;
+      if (!extraction || !extraction.items || !extraction.items.length) {
+        if (importReviewSummary) importReviewSummary.textContent = '';
+        importReviewPanel.innerHTML = '<p class="import-panel-empty">No estimate line items extracted yet.</p>';
+        return;
+      }
+
+      var summary = LineItemSchema
+        ? LineItemSchema.summarizeValidation(extraction.items)
+        : { total: extraction.rowCount, valid: 0, needs_review: extraction.needsReviewCount };
+
+      if (importReviewSummary) {
+        importReviewSummary.textContent = 'Sheet: ' + extraction.sheetName
+          + ' · Line items: ' + summary.total
+          + ' · Valid: ' + summary.valid
+          + ' · Needs review: ' + summary.needs_review;
+      }
+
+      var thead = '<thead><tr>'
+        + '<th>#</th><th>Discipline</th><th>Section</th><th>Deliverable</th>'
+        + '<th>Qty</th><th>Unit</th><th>Engr</th><th>Dsgn</th><th>HVE</th><th>Total</th>'
+        + '<th>Validation</th><th>Notes</th>'
+        + '</tr></thead>';
+      var tbody = '<tbody>';
+      extraction.items.forEach(function (item, idx) {
+        var rowClass = item.validationStatus === 'needs_review' ? ' class="import-row-flagged"' : '';
+        tbody += '<tr' + rowClass + '>'
+          + '<td>' + (idx + 1) + '</td>'
+          + '<td>' + escapeHtml(item.discipline || '—') + '</td>'
+          + '<td>' + escapeHtml(item.estimateSection || '—') + '</td>'
+          + '<td>' + escapeHtml(item.deliverable) + '</td>'
+          + '<td>' + (item.qty || '—') + '</td>'
+          + '<td>' + escapeHtml(item.unit || '—') + '</td>'
+          + '<td>' + (item.engineerHours || '—') + '</td>'
+          + '<td>' + (item.designerHours || '—') + '</td>'
+          + '<td>' + (item.hveHours || '—') + '</td>'
+          + '<td>' + item.totalHours + '</td>'
+          + '<td>' + escapeHtml(item.validationStatus) + '</td>'
+          + '<td>' + escapeHtml(item.notes) + '</td>'
+          + '</tr>';
+      });
+      tbody += '</tbody>';
+      importReviewPanel.innerHTML = '<table class="import-preview-table">' + thead + tbody + '</table>';
+    }
+
+    function runPmEstExtraction(detection) {
+      if (!session || !PmEstExtractor) {
+        log('PM Est extractor not available.');
+        return;
+      }
+      try {
+        var extraction = PmEstExtractor.extractPmEstLineItems(session, {
+          templateName: detection.templateName,
+          templateVersion: detection.templateVersion,
+        });
+        renderEstimateLineItems(extraction);
+        log('Extracted ' + extraction.rowCount + ' estimate line item(s) from PM Est.'
+          + (extraction.needsReviewCount ? ' (' + extraction.needsReviewCount + ' need review)' : ''));
+        setStatus([
+          '✓ Page Loaded',
+          '✓ Eichleay PSE detected',
+          '✓ PM Est line items (' + extraction.rowCount + ')',
+        ]);
+        if (hooks.onLineItemsExtracted) hooks.onLineItemsExtracted(extraction, session);
+      } catch (err) {
+        renderEstimateLineItems(null);
+        log('Extraction error: ' + (err.message || String(err)));
+      }
+    }
+
+    function renderHeaders(preview) {
       if (!headersPanel) return;
       if (!preview.headers.length) {
         headersPanel.innerHTML = '<p class="import-panel-empty">No column headers detected in the first '
@@ -260,6 +337,7 @@
         session = null;
         WorkbookReader.clearSession();
         renderTemplateDetection(null);
+        renderEstimateLineItems(null);
         fileLabel.textContent = 'No file selected';
         setStatus(['✓ Page Loaded', '✗ ' + (err.message || 'Workbook read failed')]);
         log('Error: ' + (err.message || String(err)));

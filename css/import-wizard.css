@@ -280,3 +280,7 @@
   content: '○ ';
   color: var(--muted);
 }
+
+.import-preview-table tr.import-row-flagged td {
+  background: #fff4f4;
+}

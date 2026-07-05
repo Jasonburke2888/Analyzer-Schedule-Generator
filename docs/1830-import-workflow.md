@@ -1,99 +1,78 @@
 # 1830 Estimate Import Workflow (V3)
 
-Standalone **import test page** at `import.html`. Project **1830** is the reference sample — not hard-coded in detection logic.
+Standalone **import test page** at `import.html`. The **estimate workbook is the source of truth** — no schedule activities, no deliverable renaming.
 
 **V2.8 schedule app (`index.html` + `js/app.js`) is unchanged.**
 
 ## How to open import.html
 
 ```bash
-cd Analyzer-Schedule-Generator
 python3 -m http.server 8080
 ```
 
 Open [http://localhost:8080/import.html](http://localhost:8080/import.html)
 
-Requires network for SheetJS CDN on first load.
+## Pipeline
 
-## Sprint flow
-
-### Sprint 1 — Workbook Reader ✓
-
-1. **Choose Excel File** — any engineering estimate workbook
-2. **Workbook** panel — file name, sheet count
-3. **Worksheets** — select a tab
-4. **Detected Column Headers** — heuristic header row
-5. **Preview** — first 25 rows
-
-No parsing. No schedule merge.
-
-### Sprint 2 — Eichleay Template Detection ✓
-
-After a workbook opens, **Template Detection** runs automatically using `eichleay-template-detector.js`.
-
-**Detection rules:**
-
-| Signal | Rule |
-|--------|------|
-| Expected sheets | PM Est, Summary, Process, Pipe Eng, Pipe Des, Elect, I&C, Sched, Staff Plan, Dates (flexible name match) |
-| PM Est | Sheet contains FEL phase columns (FEL-1 … FEL-4) |
-| Discipline sheets | Process / Pipe Eng / I&C etc. contain engineering + design hour column structure |
-
-**Output:**
-
-```json
-{
-  "templateName": "Eichleay PSE",
-  "templateVersion": "old",
-  "confidenceScore": 72,
-  "matchedSignals": ["Sheet: PM Est (\"PM Est\")", "PM Est: FEL phase columns detected", "..."],
-  "missingSignals": ["Sheet: Pipe Des", "..."],
-  "isMatch": true
-}
+```
+Excel workbook
+  → Workbook Reader (preview)
+  → Eichleay Template Detection
+  → PM Est Extractor → Estimate Line Items
 ```
 
-- `templateName` is set only when `confidenceScore >= 55`
-- **No hour parsing**, **no activities**, **no mapping** in Sprint 2
+The schedule builder will consume Estimate Line Items in a later milestone.
 
-### Sprint 3+ (planned)
+## Estimate Line Item
 
-- Parse hours from discipline sheets
-- Mapping Review → ActivityLibrary
-- Resource Loader → schedule candidates
+Each **Estimate Line Item** is one labor-bearing row from the estimate.
+
+| Field | Description |
+|-------|-------------|
+| Discipline | From estimate column (verbatim) |
+| Estimate Section | Sheet name, section column, or FEL phase when unambiguous |
+| Deliverable | **Verbatim** from estimate — never renamed |
+| Qty | Quantity when present |
+| Unit | Unit of measure when present |
+| Engineer Hours | Engineer hours column |
+| Designer Hours | Designer hours column |
+| HVE Hours | HVE / checker / review hours when present |
+| Total Hours | Total column or sum when confidently derived |
+| Notes | Estimate notes + FEL detail when needed |
+| Validation Status | `valid` or `needs_review` |
+
+**Not included:** activity names, mapping status, schedule merge, resource loading.
+
+## Extraction rules (PM Est only)
+
+- **PM Est sheet only** — other tabs not parsed yet
+- Skip blank rows and total/header rows
+- Do not infer schedule logic or rename deliverables
+- Uncertain values left blank; `validationStatus = needs_review`
 
 ## Sample fixture
 
 ```bash
-pip install openpyxl   # once
+pip install openpyxl
 python3 scripts/generate-pse-fixture.py
 ```
-
-`data/fixtures/1830-pse-sample.xlsx` includes Eichleay-style sheet names (PM Est with FEL columns, Process, Pipe Eng, I&C, etc.) for local detection testing.
 
 ## Script load order (import.html)
 
 ```html
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="./app/shared/standard-import-schema.js"></script>
 <script src="./app/shared/excel-reader.js"></script>
+<script src="./app/shared/estimate-line-item-schema.js"></script>
 <script src="./app/estimate-import/workbook-reader.js"></script>
 <script src="./app/estimate-import/eichleay-template-detector.js"></script>
+<script src="./app/estimate-import/eichleay-pm-est-extractor.js"></script>
 <script src="./app/estimate-import/workbook-reader-ui.js"></script>
 ```
 
-Parser modules (`template-manager`, `eichleay-pse-old-parser`, `import-review`) remain loaded for future sprints but are **not invoked** on the import page yet.
+## Next step
 
-## Current limitations
-
-| Limitation | Notes |
-|------------|-------|
-| Detection only | No row parsing or hour extraction |
-| Eichleay PSE only | Other templates need new detector modules |
-| Separate page | `index.html` schedule builder untouched |
-| Heuristic headers | Sprint 1 header detect ≠ final column map |
+Schedule builder consumes validated Estimate Line Items (future milestone).
 
 ## Related
 
 - [estimate-import-engine.md](./estimate-import-engine.md)
-- [v3-database-schema.md](./v3-database-schema.md)
 - Schedule app: [index.html](../index.html)

@@ -17,7 +17,7 @@
     <a class="import-nav-link" href="./index.html">← Back to Schedule Builder</a>
 
     <section class="import-hero" aria-label="Import engine status">
-      <h2>Estimate Import Engine V3 — Sprint 2: Template Detection</h2>
+      <h2>Estimate Import Engine V3</h2>
       <ul class="import-status-list" id="import-engine-status">
         <li>✓ Page Loaded</li>
         <li>✓ Ready for Excel Import</li>
@@ -66,9 +66,12 @@
       </div>
     </section>
 
-    <section class="import-panel" aria-label="Mapping review">
-      <h3>Mapping Review</h3>
-      <p class="import-panel-empty" id="mapping-review-panel">Not started — hour parsing and mapping are Sprint 3+.</p>
+    <section class="import-panel" aria-label="Estimate line items">
+      <h3>Estimate Line Items</h3>
+      <p class="import-preview-meta" id="estimate-line-items-summary"></p>
+      <div id="estimate-line-items-panel" class="import-preview-wrap">
+        <p class="import-panel-empty">Extract runs when Eichleay PSE is detected (PM Est sheet only).</p>
+      </div>
     </section>
 
     <section class="import-panel" aria-label="Console log">
@@ -78,15 +81,12 @@
   </div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="./app/shared/standard-import-schema.js"></script>
   <script src="./app/shared/excel-reader.js"></script>
+  <script src="./app/shared/estimate-line-item-schema.js"></script>
   <script src="./app/estimate-import/workbook-reader.js"></script>
   <script src="./app/estimate-import/eichleay-template-detector.js"></script>
+  <script src="./app/estimate-import/eichleay-pm-est-extractor.js"></script>
   <script src="./app/estimate-import/workbook-reader-ui.js"></script>
-  <script src="./app/estimate-import/template-manager.js"></script>
-  <script src="./app/estimate-import/template-detector.js"></script>
-  <script src="./app/estimate-import/eichleay-pse-old-parser.js"></script>
-  <script src="./app/estimate-import/import-review.js"></script>
   <script>
     (function () {
       'use strict';
@@ -100,15 +100,12 @@
       }
 
       document.addEventListener('DOMContentLoaded', function () {
-        log('Sprint 2 — Workbook Reader + Eichleay Template Detection initialized.');
-        log('No hour parsing or schedule activities in this sprint.');
+        log('Estimate import — workbook reader, template detection, line item extraction.');
+        log('Estimate is source of truth. No schedule activities created here.');
         AnalyzerSchedule.WorkbookReaderUI.mount({
           onLog: log,
-          onTemplateDetection: function (result) {
-            if (result.isMatch) {
-              log('Ready for Mapping Wizard (Sprint 3) — template locked: '
-                + result.templateName + ' / ' + result.templateVersion);
-            }
+          onLineItemsExtracted: function (extraction) {
+            log('Estimate line items ready — ' + extraction.rowCount + ' labor-bearing row(s).');
           },
         });
       });
