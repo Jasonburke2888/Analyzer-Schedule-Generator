@@ -21,7 +21,6 @@
   var DISCIPLINE = 'Civil/Structural';
   var SHEET_PATTERNS = [/^civ\s*str$/i, /^civil\s*str$/i, /^civil\s*\/\s*str$/i];
   var HEADER_SCAN = 80;
-  var LABOR_TOLERANCE = 0.01;
   var QA_LINE_ITEM_WARN_THRESHOLD = 25;
   var QA_TOO_MANY_LINE_ITEMS_MSG =
     'Too many Civil/Structural line items — parser may be reading summary/setup rows.';
@@ -369,15 +368,26 @@
   function buildValidation(deliverable, engineerHours, designerHours, hveHours, totalHours) {
     var reviewReason = '';
     var validationStatus = VS.VALID;
-    var sum = engineerHours + designerHours + hveHours;
 
-    if (Math.abs(sum - totalHours) > LABOR_TOLERANCE) {
+    if (!deliverable) {
       validationStatus = VS.NEEDS_REVIEW;
-      reviewReason = 'Labor total mismatch';
+      reviewReason = 'Missing deliverable';
     }
-    if (!deliverable && totalHours > 0) {
+
+    if (totalHours == null || !Number.isFinite(totalHours)) {
       validationStatus = VS.NEEDS_REVIEW;
-      reviewReason = reviewReason ? reviewReason + '; Missing deliverable' : 'Missing deliverable';
+      reviewReason = reviewReason ? reviewReason + '; Total hours undetermined' : 'Total hours undetermined';
+      return { validationStatus: validationStatus, reviewReason: reviewReason };
+    }
+
+    var hasLabor = totalHours > 0
+      || engineerHours > 0
+      || designerHours > 0
+      || hveHours > 0;
+
+    if (!hasLabor) {
+      validationStatus = VS.NEEDS_REVIEW;
+      reviewReason = reviewReason ? reviewReason + '; No labor hours' : 'No labor hours';
     }
 
     return { validationStatus: validationStatus, reviewReason: reviewReason };
